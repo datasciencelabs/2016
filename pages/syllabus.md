@@ -16,7 +16,7 @@ We will learn these concepts through six data analysis projects. Grades will be 
 * participation in discussions (5%)
 
 #### Prerequisites
-Must have basic programming knowledge, and statistics knowledge at the level of Stat 100 or above (Stat 110 recommended). 
+Must have basic programming knowledge, and statistics knowledge at the level of Stat 100 or above
 
 #### Required Textbook
 None. Instead, we have a list of recommended readings on the web site.
