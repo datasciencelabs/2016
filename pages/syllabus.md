@@ -10,6 +10,7 @@ The goal of this course is to teach students to answer questions with data. To d
 
 #### What is the structure of this course?
 We will learn these concepts through six data analysis projects. Grades will be based on:
+
 * 6 homeworks (30%)
 * 2 midterms (15%)
 * 1 final project (35%)
