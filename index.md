@@ -8,7 +8,6 @@ title: Introduction to Data Science
 #### Lectures and Sections
 
 * Lectures are 8:30-10:20am on Mondays & Wednesdays in Kresge G2 in the Longwood campus.
-* All [lectures will be posted here](http://datasciencelabs.github.io/2016/pages/lectures.html) and should be available 24 hours after meeting time.
 * We will be using R for all programming assignments and projects. 
 
 #### Instructors
@@ -19,6 +18,7 @@ title: Introduction to Data Science
 #### Staff
 
 * Luis Campos
+* Stephanie Chan
 * Brian Feeny
 * Alyssa Frazee
 * Ollie McDonald
