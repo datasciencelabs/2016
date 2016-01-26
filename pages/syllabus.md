@@ -32,4 +32,4 @@ This is a **TENTATIVE** schedule for the course.
 
 This is a schedule for office hours which will start Feb 1. The locations of the office hours will be made available soon. 
 
-<iframe src="https://docs.google.com/spreadsheets/d/1lX45-oOBzvCVGdFiEInJPCepQ5F9cd9MkbFHiC_hyHk/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" width="100%" height="800"></iframe>
+<iframe src="https://docs.google.com/spreadsheets/d/1lX45-oOBzvCVGdFiEInJPCepQ5F9cd9MkbFHiC_hyHk/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" width="100%" height="700"></iframe>
