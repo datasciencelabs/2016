@@ -1,0 +1,206 @@
+---
+title: "Introduction to R"
+output: html_document
+---
+
+
+# R for Data Science
+
+## Introduction 
+
+We will be using the
+[R programming language](https://cran.r-project.org/) for all our
+analysis. You will learn R and statistics simultaneously. We will by installing R and RStudio, then covering some basics.
+
+Although R is technically a programming language, it was developed specifically for analyzing data. We will therefore teach R in the context of analyzing data rather than as one would teach a programming language. We will therefore be learning some data analysis concepts along the way. Below we include a list of resources for those interested in learning R independent of data.
+
+## Installing R
+
+The first step is to install R. You can download and install R from
+the [Comprehensive R Archive Network](https://cran.r-project.org/)
+(CRAN). It is relatively straightforward, but if you need further help
+you can try the following resources: 
+
+* [Installing R on Windows](https://github.com/genomicsclass/windows#installing-r) 
+* [Installing R on Mac](http://youtu.be/Icawuhf0Yqo)
+* [Installing R on Ubuntu](http://cran.r-project.org/bin/linux/ubuntu/README)
+
+## Installing RStudio
+
+The next step is to install RStudio, a program for viewing and running
+R scripts. Technically you can run all the code shown here without
+installing RStudio, but we highly recommend this integrated
+development environment (IDE). Instructions are
+[here](http://www.rstudio.com/products/rstudio/download/) and for
+Windows we have special
+[instructions](https://github.com/genomicsclass/windows). 
+
+
+
+## The R ecosystem
+
+When you download R from CRAN you get what we call _base_ R. This includes _functions_ that are considered fundamental for data analysis. It also includes several example datasets. You can see all the dataset by typing
+
+```{r,eval=FALSE}
+data()
+```
+
+An example of a base function is `plot`. Here is an example in which we plot Mauna Loa Atmospheric CO2 Concentration:
+
+```{r}
+plot(co2)
+```
+
+Note that the base functionality is bare bones. The reason for doing this is that data science applications are so broad and the statistical toolbox is so broad that a better approach is to make specific functionality available _on demand_. We do this using _packages_ also called _libraries_. 
+Some packages are considered popular enough that they are included with the base download.
+For example, the software implementing the method of survival analysis are in the `survival` package. To bring that functionality to your current session we type
+
+```{r,eval=FALSE}
+library(survival)
+```
+
+CRAN has over 4,000 packages that are not included in the base installation. You can install these using the `install.packages` function. We will see an example in the next section.
+
+## Installing Packages
+
+The first R command we will run is `install.packages`.  R only includes a basic set of
+functions. It can do much more than this, but not everybody needs
+everything so we instead make some functions available via
+packages. Many of these functions are stored in CRAN. Note that these
+packages are vetted: they are checked for common errors and they must have
+a dedicated maintainer. You can easily install packages from within R if you know
+the name of the packages. As an example, we are going to install the
+package `dplyr`  which we use in our first data analysis examples: 
+
+```{r,eval=FALSE}
+install.packages("dplyr")
+```
+
+We can then load the package into our R sessions using the `library` function:
+
+```{r, warning=FALSE}
+library(dplyr)
+```
+
+From now on you will see that we sometimes load packages without
+installing them. This is because once you install the package, it
+remains in place and only needs to be loaded with `library`. If you
+try to load a package and get an error, it probably means you need to
+install it first.
+
+
+
+## Getting help
+
+A key things you need to know about R is that you can get help for a function using `help` or `?`, like this:
+```{r,eval=FALSE}
+?install.packages
+help("install.packages")
+```
+
+## Comments
+The hash character represents comments, so text following these
+characters is not interpreted:
+
+```{r}
+##This is just a comment
+```
+
+
+## Resources
+
+There are many resources to help you 
+familiarize yourself with the basics of programming and R syntax.  One such tutorial is the [swirl](http://swirlstats.com/) tutorial, which teaches you R programming interactively, at your own pace and in the R console. Once you have R installed, you can install `swirl` and run it the following way: 
+
+```{r, eval=FALSE}
+install.packages("swirl")
+library(swirl)
+swirl()
+```
+
+Alternatively you can take the Data Camp [R course](https://www.datacamp.com/courses/free-introduction-to-r) or 
+[try R](http://tryr.codeschool.com/) interactive class from Code School. 
+
+There are also many open and free resources and reference
+guides for R. Two examples are:
+
+* [Quick-R](http://www.statmethods.net/): a quick online reference for data input, basic statistics and plots
+* R reference card (PDF)[https://cran.r-project.org/doc/contrib/Short-refcard.pdf] by Tom Short 
+
+## Importing Data into R
+
+The first step when preparing to analyze data is to read in the data into R. There are several ways to do this and we will discuss three of them. But you only need to learn one to follow along. 
+
+In the life sciences, small datasets such as the one used as an
+example in the next sections are typically stored as Excel files. Although there
+are R packages designed to read Excel (xls) format, you generally want
+to avoid this and save files as comma delimited (Comma-Separated
+Value/CSV) or tab delimited (Tab-Separated Value/TSV/TXT) files.
+These plain-text formats are often easier for sharing data with
+collaborators, as commercial software is not required for viewing or
+working with the data.
+We will start with a simple example dataset containing the [heights of students in our class](https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv)
+
+The first step is to find the file containing your data and know its *path*. 
+
+
+#### Paths and the Working Directory
+
+When you are working in R it is useful to know your _working directory_. This is the directory or folder in which R will save or look for files by default. You can see your working directory by typing:
+
+```{r, eval=FALSE}
+getwd()
+```
+
+You can also change your working directory using the function `setwd`. Or you can change it through RStudio by clicking on "Session". 
+
+The functions that read and write files (there are several in R) assume you mean to look for files or write files in the working directory. Our recommended approach for beginners will have you reading and writing to the working directory. However, you can also type the [full path](http://www.computerhope.com/jargon/a/absopath.htm), which will work independently of the working directory.
+
+#### Projects in RStudio
+
+We find that the simplest way to organize yourself is to start a Project in RStudio (Click on "File" and "New Project"). When creating the project, you will select a folder to be associated with it. You can then download all your data into this folder. Your working directory will be this folder.
+
+ 
+
+
+## More advanced R Resources (from Roger Peng)
+
+Available from CRAN (http://cran.r-project.org)
+
+-   An Introduction to R
+
+-   Writing R Extensions
+
+-   R Data Import/Export
+
+-   R Installation and Administration (mostly for building R from
+    sources)
+
+-   R Internals (not for the faint of heart)
+
+
+#### Some Useful Books on S/R
+
+Standard texts
+
+-   Chambers (2008). *Software for Data Analysis*, Springer. (your
+    textbook)
+
+-   Chambers (1998). *Programming with Data*, Springer.
+
+-   Venables & Ripley (2002). *Modern Applied Statistics with S*,
+    Springer.
+
+-   Venables & Ripley (2000). *S Programming*, Springer.
+
+-   Pinheiro & Bates (2000). *Mixed-Effects Models in S and S-PLUS*,
+    Springer.
+
+-   Murrell (2005). *R Graphics*, Chapman & Hall/CRC Press.
+
+Other resources
+
+-   Springer has a series of books called *Use R!*.
+
+-   A longer list of books is at
+    http://www.r-project.org/doc/bib/R-books.html

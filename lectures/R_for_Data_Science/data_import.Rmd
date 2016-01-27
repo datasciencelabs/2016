@@ -1,0 +1,71 @@
+---
+title: "Data Import, munging, and exploration"
+output: html_document
+---
+
+
+## Data import
+
+Usually the first step in data analysis is getting the data in a form that permits analysis, for example, importing the data into the R environment. 
+
+We took a poll of our students to obtain (self-reported) height and gender. Our task is to describe this list of heights to someone (or something) that has no idea what human adults look like.
+
+The are several function in the base package available for reading data. A Google search of "how do I import data into R?" gets us to 
+
+```{r,eval=FALSE}
+?read.table
+```
+
+From the help file we see that we need that we need 
+
+> the name of the file which the data are to be read from. Each row of the table appears as one line of the file. If it does not contain an absolute path, the file name is relative to the current working directory, getwd(). Tilde-expansion is performed where supported. This can be a compressed file (see file).
+
+#### Paths and the Working Directory
+
+When you are working in R it is useful to know your _working directory_. This is the directory or folder in which R will save or look for files by default. You can see your working directory by typing:
+
+```{r, eval=FALSE}
+getwd()
+```
+
+You can also change your working directory using the function `setwd`. Or you can change it through RStudio by clicking on "Session". 
+
+The functions that read and write files (there are several in R) assume you mean to look for files or write files in the working directory. Our recommended approach for beginners will have you reading and writing to the working directory. However, you can also type the [full path](http://www.computerhope.com/jargon/a/absopath.htm), which will work independently of the working directory.
+
+#### Projects in RStudio
+
+We find that the simplest way to organize yourself is to start a Project in RStudio (Click on "File" and "New Project"). When creating the project, you will select a folder to be associated with it. You can then download all your data into this folder. Your working directory will be this folder.
+
+ 
+#### Option 1: Download file with your browser to your working directory
+
+
+You can navigate to the file `bio260_heights.csv` in data directory of our data repository:
+[GitHub](https://github.com/datasciencelabs/2016_data). If you navigate to the file, you need to click on *Raw* on the
+upper right hand corner of the data and then use your browser's "Save
+As" function to ensure that the downloaded file is in a CSV
+format. Some browsers add an extra suffix to your file name by
+default. You do not want this. You want your file to be named
+`bio260_heights.csv`. 
+
+![GitHub page screenshot](screenshot.png)
+
+Once you have this file in your working directory, then you can simply read it in like this:
+
+```{r,eval=FALSE}
+dat <- read.csv("bio260_heights.csv")
+```
+
+If you did not receive any message, then you probably read in the file successfully.
+
+#### Option 2: Download from within R 
+
+We store many of the datasets used here on [GitHub](https://github.com/datasciencelabs/2016_data). You can actually read these files directly to your R session in the following way:
+
+```{r,message=FALSE}
+url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+dat <- read.csv(url)
+```
+
+
+

@@ -1,0 +1,312 @@
+---
+title: "Data Wrangling"
+output: html_document
+---
+
+## Data Wrangling
+
+In the real world, data science projects rarely involve data that can be easily imported ready for analysis. According to Wikipedia:
+
+>Data munging or data wrangling is loosely the process of manually converting or mapping data from one "raw" form into another format that allows for more convenient consumption of the data with the help of semi-automated tools.
+
+Our example dataset provides an example:
+
+```{r}
+url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+dat <- read.csv(url)
+```
+
+First not how we make assignments in R: we use `<-`. We can also use the equal sign `=` although here we try to stick to `<-` to make it very clear it is an assignment and not logical statement.
+
+We also note that we have put the content of what comes out of `read.csv` into an _object_. We picked the object name `dat`. 
+
+So what is `dat` exactly? We can get a quick summary of what an object is with the function `str` (stands for structure)
+
+```{r}
+str(dat)
+```
+
+Here we see that this object is a `data.frame`. These are one of the most widely used data types in R. They are particularly useful for storing tables. 
+
+To see more of this object we can type it 
+
+
+Now we want to describe the heights. We could simply report the list of numbers. But there is a problem. Take a look at the entries:
+```{r,eval=FALSE}
+View(dat)
+```
+
+Notice these not all entries are numbers. Furthermore, they are not all in inches. So what to do? We need to wrangle
+
+## Data Manipulation wiht `dplyr`
+
+R provides incredibly powerful and flexible language for data manipulation. However, the syntax is somewhat hard to get used to. We will therefore  introducing a package that makes the syntax much more like the English language. This package is `dplyr` which you should install if you have not done so already.
+
+```{r}
+library(dplyr)
+```
+
+When using `dplyr` we recommend reading in data with the functions in the `readr` package:
+
+```{r}
+library(readr)
+dat <- read_csv("bio260_heights.csv")
+```
+
+This object is now a special type of `data.frame` called `tbl_df` that has a nicer printing method. We can now simply evaluate an expression with just the object and see a meaningful summary instead of 
+everything.
+
+```{r}
+dat
+```
+
+#### Selecting columns
+
+Right, we are interested in looking at heights. We can select just that column using:
+
+```{r}
+select(dat, contains("height"))
+```
+
+We have a problem: this is a `character`. We want numbers. 
+
+## Renaming columns
+
+Before we continue it will be convenient to change the names of our columns to something more convenient.
+
+```{r}
+names(dat) <- c("time","gender","height")
+```
+
+## Vectorization
+
+```{r}
+h <- dat$Height
+h[3]
+as.numeric(h[3])
+```
+
+One powerful feature of R is that we can _vectorize_
+most operation
+
+```{r}
+ as.numeric(h) 
+```
+
+## Missing values
+
+Note in the the `NA` value in the object above. 
+
+These are missing values. We can find out which values are missing using the function 
+
+```{r,eval=FALSE}
+?is.na
+```
+
+## Adding columns
+```{r}
+dat <- mutate(dat, numeric_height=as.numeric(height),
+              original=height)
+```
+
+## Subsetting Observations
+
+To see all the row in which we have problems:
+
+```{r}
+filter(dat, is.na(numeric_height))
+```
+
+## The Pipe
+
+```{r}
+filter(dat, is.na(numeric_height)) %>% select(height) 
+```
+
+Let's see more
+
+```{r}
+filter(dat, is.na(numeric_height)) %>% select(height) %>% print(n=21)
+```
+
+
+Let's get rid of `"`
+
+```{r}
+dat <- mutate(dat, height= gsub("ft","'",height) )
+dat <- mutate(dat, height= gsub("\"|inches|\ ","",height) )
+```
+
+```{r}
+filter(dat, is.na(numeric_height)) %>% select(height) %>% print(n=21)
+```
+
+
+## Functions 
+
+```{r}
+fixheight <- function(x){
+  y <- strsplit(x, "'")
+  ret <- sapply(y, function(z){
+    ifelse( length(z)>1, as.numeric(z[1])*12 + as.numeric(z[2]) ,
+            as.numeric(z[1]))
+  })
+  return(ret)
+}
+```
+
+We can now test the function
+```{r}
+fixheight( "70")
+fixheight( "5'10")
+fixheight( "5'10")
+fixheight( c("5'9","70","5'11"))
+```
+
+
+```{r}
+dat <- mutate(dat, height=fixheight(height)) %>% select(-numeric_height)
+```
+
+## Distributions
+
+The simplest way to think of a *distribution* is as a compact description of many numbers. For example, we have measured the heights of all students in a course. Imagine you need to describe these numbers to someone that has no idea what these heights are, such as an alien that has never visited Earth. 
+
+One approach to summarizing these numbers is to simply list them all out for the alien to see. Here are 10 randomly selected heights of 1,078:
+
+```{r}
+select(dat, height) %>% print(n=nrow(dat))
+```
+
+#### Cumulative Distribution Function
+
+Scanning through these numbers, we start to get a rough idea of what the entire list looks like, but it is certainly inefficient. We can quickly improve on this approach by defining and visualizing a _distribution_. To define a distribution we compute, for all possible values of $a$, the proportion of numbers in our list that are below $a$. We use the following notation:
+
+$$ F(a) \equiv \mbox{Pr}(x \leq a) $$
+
+This is called the cumulative distribution function (CDF). When the CDF is derived from data, as opposed to theoretically, we also call it the empirical CDF (ECDF). The ECDF for the height data looks like this:
+
+```{r ecdf,fig.cap="Empirical cummulative distribution function for height.", echo=FALSE}
+x <- dat$height
+smallest <- floor( min(x) )
+largest <- ceiling( max(x) )
+values <- seq(smallest, largest,len=300)
+heightecdf <- ecdf(x)
+plot(values, heightecdf(values), type="l",
+     xlab="a (Height in inches)",ylab="Pr(x <= a)")
+```
+
+## Histograms
+
+Although the empirical CDF concept is widely discussed in statistics textbooks, the plot is actually not very popular in practice. The reason is that histograms give us the same information and are easier to interpret. Histograms show us the
+proportion of values in intervals: 
+
+$$ \mbox{Pr}(a \leq x \leq b) = F(b) - F(a) $$
+
+Plotting these heights as bars is what we call a _histogram_. It is a
+more useful plot because we are usually more interested in intervals,
+such and such percent are between 70 inches and 71 inches, etc.,
+rather than the percent less than a particular height.
+It is also easier to distinguish different types (families) of distributions
+by looking at histograms. Here is a histogram of heights: 
+
+```{r hist}
+hist(dat$height)
+```
+
+
+## Outliers
+
+The plot has revealed another problem. We have number larger than 96 inches and shorter than 12 inches. 
+
+We introduce the or operator
+```{r}
+filter(dat, height>96 | height < 12) %>% select(original)
+```
+
+```{r}
+dat <- mutate(dat, height=ifelse(height>96, height/2.54, height))
+```
+
+```{r}
+filter(dat, height>96 | height < 12) %>% select(original)
+```
+
+```{r}
+dat <- mutate(dat, height=ifelse(height==5.51, 65, height))
+dat <- mutate(dat, height=ifelse(height==5.11, 71, height))
+dat <- mutate(dat, height=ifelse(height>12, height,
+                                 floor(height)*12+(height-floor(height))*10))
+```
+
+
+```{r}
+filter(dat, height>96 | height < 12) %>% select(original)
+```
+
+```{r}
+hist(dat$height)
+```
+
+
+
+## Normal Distribution
+
+A distribution we often see in nature is the bell curve, also known as the normal distribution or Gaussian distribution. When the histogram of a list of numbers approximates the normal distribution, we can use a convenient mathematical formula to approximate the proportion of values or outcomes in any given interval:
+
+$$
+\mbox{Pr}(a < x < b) = \int_a^b \frac{1}{\sqrt{2\pi\sigma^2}} \exp{\left( \frac{-(x-\mu)^2}{2 \sigma^2} \right)} \, dx
+$$
+
+While the formula may look intimidating, don't worry, you will never
+actually have to type it out, as it is stored in a more convenient
+form (as `pnorm` in R which sets *a* to $-\infty$, and takes *b* as an argument). 
+
+Note that if this distribution approximates our data, then we only need $\mu$ and $\sigma$ to describe the entire population. We can get the proportion of values between any interval:
+
+For example notice that about 95\% of the values are withing one standard deviation of the average:
+```{r}
+pnorm(2)-pnorm(-2)
+```
+
+Most all values are within 3
+```{r}
+pnorm(3)-pnorm(-3)
+```
+
+Here $\mu$ and $\sigma$ are referred to as the mean and the standard
+deviation of the population (we explain these in more detail in
+another section). If this *normal approximation* holds for our list, then the
+population mean and variance of our list can be used in the formula
+above. 
+
+If we denote these values as $x_1,\dots,x_n$. 
+The mean:
+
+$$\mu = \frac{1}{n}\sum_{i=1}^n x_i $$
+
+The variance:
+
+$$\sigma^2 = \frac{1}{n}\sum_{i=1}^n (x_i-\mu_X)^2 $$
+
+with the standard deviation being the square root of the variance. 
+
+ 
+ 
+ 
+```{r}
+qqnorm(dat$height)
+qqline(dat$height)
+```
+
+```{r}
+men <- filter(dat, gender=="Male")
+qqnorm(men$height)
+qqline(men$height)
+
+women <- filter(dat, gender=="Female")
+qqnorm(women$height)
+qqline(women$height)
+
+```
+
