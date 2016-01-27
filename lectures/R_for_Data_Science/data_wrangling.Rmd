@@ -38,6 +38,32 @@ View(dat)
 
 Notice these not all entries are numbers. Furthermore, they are not all in inches. So what to do? We need to wrangle
 
+#### Extracting columns
+
+To extract columns from the data.frame we use the `$` character like this:
+
+```{r}
+dat$Timestamp
+```
+
+This now gives us a vector. We can access elements of the vector using the `[` symbol:
+
+```{r}
+dat$Timestamp[2]
+```
+
+#### Quick Review of Vectors
+
+The following simple function may come in handy
+
+```{r}
+x <- c(1,2,3,4,5)
+y <- 1:5
+z <- seq(1,5)
+```
+
+
+
 ## Data Manipulation wiht `dplyr`
 
 R provides incredibly powerful and flexible language for data manipulation. However, the syntax is somewhat hard to get used to. We will therefore  introducing a package that makes the syntax much more like the English language. This package is `dplyr` which you should install if you have not done so already.
