@@ -68,7 +68,7 @@ z <- seq(1,5)
 
 R provides incredibly powerful and flexible language for data manipulation. However, the syntax is somewhat hard to get used to. We will therefore  introducing a package that makes the syntax much more like the English language. This package is `dplyr` which you should install if you have not done so already.
 
-```{r}
+```{r, message=FALSE}
 library(dplyr)
 ```
 
