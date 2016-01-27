@@ -42,7 +42,7 @@ Notice these not all entries are numbers. Furthermore, they are not all in inche
 
 To extract columns from the data.frame we use the `$` character like this:
 
-```{r}
+```{r, eval=FALSE}
 dat$Timestamp
 ```
 
@@ -76,7 +76,7 @@ When using `dplyr` we recommend reading in data with the functions in the `readr
 
 ```{r}
 library(readr)
-dat <- read_csv("bio260_heights.csv")
+dat <- read_csv("https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv")
 ```
 
 This object is now a special type of `data.frame` called `tbl_df` that has a nicer printing method. We can now simply evaluate an expression with just the object and see a meaningful summary instead of 
