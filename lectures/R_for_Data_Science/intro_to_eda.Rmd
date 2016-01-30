@@ -1,0 +1,226 @@
+---
+title: "Distributions and basic exploratory data analysis"
+output: html_document
+---
+
+```{r,echo=FALSE,warning=TRUE}
+library(dplyr)
+library(readr)
+url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+dat <- read_csv(url)
+names(dat) <- c("time","gender","height")
+dat <- mutate(dat, numeric_height=as.numeric(height),
+              original=height)
+dat <- mutate(dat, height= gsub("ft","'",height) )
+dat <- mutate(dat, height= gsub("\"|inches|\ ","",height) )
+fixheight <- function(x){
+  y <- strsplit(x, "'")
+  ret <- sapply(y, function(z){
+    ifelse( length(z)>1, as.numeric(z[1])*12 + as.numeric(z[2]) ,
+            as.numeric(z[1]))
+  })
+  return(ret)
+}
+dat <- mutate(dat, height=fixheight(height)) %>% select(-numeric_height)
+```
+
+## Exploratory Data Analysis
+
+An indispensable part of data wrangling is exploratory data analysis. In particular with large dataset, it is practically impossible to examine the data from potential errors by looking at tables. Here we describe some simple  visualization techniques that are quite powerful for summarizing data and identifying potential errors.
+
+## Distributions
+
+The most basic statistical summary of a list of numbers is it's distribution. The simplest way to think of a *distribution* is as a compact description of many numbers. For example, we have measured the heights of all students in a course. Imagine you need to describe these numbers to someone that has no idea what these heights are, such as an alien that has never visited Earth. 
+
+One approach to summarizing these numbers is to simply list them all out for the alien to see. Here are 10 randomly selected heights :
+
+```{r}
+select(dat, height) %>% print(n=10)
+```
+
+#### Cumulative Distribution Function
+
+Scanning through these numbers, we start to get a rough idea of what the entire list looks like, but it is certainly inefficient. We can quickly improve on this approach by defining and visualizing a _distribution_. To define a distribution we compute, for all possible values of $a$, the proportion of numbers in our list that are below $a$. We use the following notation:
+
+$$ F(a) \equiv \mbox{Pr}(x \leq a) $$
+
+This is called the cumulative distribution function (CDF). When the CDF is derived from data, as opposed to theoretically, we also call it the empirical CDF (ECDF). The ECDF for the adult male height data looks like this:
+
+```{r ecdf,fig.cap="Empirical cummulative distribution function for height.", echo=FALSE}
+data(father.son,package="UsingR")
+x <- father.son$sheight
+smallest <- floor( min(x) )
+largest <- ceiling( max(x) )
+values <- seq(smallest, largest,len=300)
+heightecdf <- ecdf(x)
+plot(values, heightecdf(values), type="l",
+     xlab="a (Height in inches)",ylab="Pr(x <= a)")
+```
+
+## Histograms
+
+Although the empirical CDF concept is widely discussed in statistics textbooks, the plot is actually not very popular in practice. The reason is that histograms give us the same information and are easier to interpret. Histograms show us the
+proportion of values in intervals: 
+
+$$ \mbox{Pr}(a \leq x \leq b) = F(b) - F(a) $$
+
+Plotting these heights as bars is what we call a _histogram_. It is a
+more useful plot because we are usually more interested in intervals,
+such and such percent are between 70 inches and 71 inches, etc.,
+rather than the percent less than a particular height.
+It is also easier to distinguish different types (families) of distributions
+by looking at histograms. Here is a histogram for the general population:
+
+```{r}
+data(father.son,package="UsingR")
+x <- father.son$sheight
+hist(x)
+```
+
+Here is a histogram for our class:
+
+```{r hist}
+hist(dat$height)
+```
+
+
+## Outliers
+
+The plot has revealed another problem. We have a number hieghts that are larger than 96 inches and shorter than 12 inches. Let's view the data for which this is the case. To do this we introduce the or logical operator `|`
+
+```{r}
+filter(dat, height>96 | height < 12) %>% select(original)
+```
+
+We see several heights that appear to be in centimeters. We will go ahead and assume this is the case and make the convertion:
+
+```{r}
+dat <- mutate(dat, height=ifelse(height>96, height/2.54, height))
+```
+
+Now let's see what outliers remain:
+```{r}
+filter(dat, height>96 | height < 12) %>% select(original)
+```
+
+These values appear to use the format $x.y$ with $x$ feet and $y$ inches. Note that these are not numbers. In particualr note that $5.11$ is larger than $5.5$. We also not a particularly strange entry which we will just assume is $5.5$:
+```{r}
+dat <- mutate(dat, height=ifelse(height==5.51, 65, height))
+```
+
+For the rest we convert to inches using the functions `floor`. This approach does not work for `5.11` so we treat that differently:
+
+```{r}
+dat <- mutate(dat, height=ifelse(height==5.11, 71, height))
+dat <- mutate(dat, height=ifelse(height>12, height, floor(height)*12+(height-floor(height))*10))
+```
+
+Let's confirm that we have removed all the outliers:
+```{r}
+filter(dat, height>96 | height < 12) %>% select(original)
+```
+
+The histogram looks more like the general population now
+```{r}
+hist(dat$height)
+```
+
+Although not quite the same.
+
+## Normal Distribution
+
+The histogram provides an excellent summary plot of a distribution. Can we summarize even further? We often see the average and standard deviation used as summary statistics. To understand why these are so widely used we need to undertand the normla distribution.
+
+The bell curve, also known as the normal distribution or Gaussian distribution is commonly found in nature. There are reasons for this which we will explain later. 
+
+When the histogram of a list of numbers is said to be approximated by the normal distribution, it means we can use a convenient mathematical formula to approximate the proportion of values or outcomes in any given interval:
+
+$$
+\mbox{Pr}(a < x < b) = \int_a^b \frac{1}{\sqrt{2\pi\sigma^2}} \exp{\left( \frac{-(x-\mu)^2}{2 \sigma^2} \right)} \, dx
+$$
+
+While the formula may look intimidating, don't worry, you will never
+actually have to type it out, as it is stored in a more convenient
+form (as `pnorm` in R which sets *a* to $-\infty$, and takes *b* as an argument). 
+
+Note that if this distribution approximates our data, then we only need to know the average $\mu$ and the standard deviation $\sigma$ to describe the entire population. 
+
+If we denote the values in our list as $x_1,\dots,x_n$. 
+The mean:
+
+$$\mu = \frac{1}{n}\sum_{i=1}^n x_i $$
+
+The variance:
+
+$$\sigma^2 = \frac{1}{n}\sum_{i=1}^n (x_i-\mu_X)^2 $$
+
+with the standard deviation being the square root of the variance. 
+
+If we have a vector in R we can use the following functions:
+
+```{r}
+x <- father.son$sheight
+mu <- mean(x)
+sd <- sqrt( mean( (x - mu)^2) )
+```
+
+If in fact, the normal distribution is a good approximation we should be able to obtain approximations of the proportion in any range. For exmaple, how many men are taller than six feet? 
+
+We can obtain the exact answer like this:
+```{r}
+sum( x> 6*12 ) / length(x)
+##which is equivalent to
+mean( x>6*12)
+```
+
+How good is the normal approximation?
+
+```{r}
+1 - pnorm( 6*12, mu, sd )
+```
+
+We can try other values and see that we get very good approximations. Once we know the US adult men have an average height of 69 inches and standard deviation of 3 inches, we know everything: two numbers are all we need to describe the distribution.
+
+### Standard units
+
+Once we know that a list of numbers follow the normal distribution, a convinent way to describe value is the number of standard deviations away from the average. We say these values are in _standard units_. 
+
+```{r}
+z <- (x - mu)/sd
+```
+
+So, for example, a seven footer is 5 SDs away from the average. If the original distribtuion is approximately normal, then these values will have a _standard normal_ distribution: average 0 and standard deviation 1.
+
+Notice that about 95\% of the values are within two standard deviation of the average:
+```{r}
+pnorm(2)-pnorm(-2)
+```
+
+Most values are within 3
+```{r}
+pnorm(3)-pnorm(-3)
+```
+
+Here $\mu$ and $\sigma$ are referred to as the mean and the standard
+deviation of the population (we explain these in more detail in
+another section). If this *normal approximation* holds for our list, then the
+population mean and variance of our list can be used in the formula
+above. 
+ 
+ 
+```{r}
+qqnorm(dat$height)
+qqline(dat$height)
+```
+
+```{r}
+men <- filter(dat, gender=="Male")
+qqnorm(men$height)
+qqline(men$height)
+
+women <- filter(dat, gender=="Female")
+qqnorm(women$height)
+qqline(women$height)
+
+```
+

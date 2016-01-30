@@ -12,7 +12,13 @@ We will be using the
 [R programming language](https://cran.r-project.org/) for all our
 analysis. You will learn R and statistics simultaneously. We will by installing R and RStudio, then covering some basics.
 
-Although R is technically a programming language, it was developed specifically for analyzing data. We will therefore teach R in the context of analyzing data rather than as one would teach a programming language. We will therefore be learning some data analysis concepts along the way. Below we include a list of resources for those interested in learning R independent of data.
+Although R is technically a programming language, it was developed specifically for analyzing data. We will therefore teach R in the context of analyzing data rather than as one would teach a programming language. As a result, we will be learning some data analysis concepts along the way. For those with limited programming experinece we highly recommend you complete one of the following R programming courses:
+
+
+* DataCamp's [R course](https://www.datacamp.com/courses/free-introduction-to-r)
+* edX's [Introduction to R Programming](https://www.edx.org/course/introduction-r-programming-microsoft-dat204x-0)
+
+Below we include a broader list of resources for learning R.
 
 ## Installing R
 
@@ -27,31 +33,55 @@ you can try the following resources:
 
 ## Installing RStudio
 
-The next step is to install RStudio, a program for viewing and running
-R scripts. Technically you can run all the code shown here without
-installing RStudio, but we highly recommend this integrated
+The next step is to install RStudio, a program for viewing and running R scripts. Technically you can run all the code shown here without installing RStudio, but we highly recommend this integrated
 development environment (IDE). Instructions are
 [here](http://www.rstudio.com/products/rstudio/download/) and for
 Windows we have special
 [instructions](https://github.com/genomicsclass/windows). 
 
+## The Console
 
+Now that you have download and installed R you are ready to start working with data. Whichever approach you are using to interact with R, we recommend RStudio, you should identify the console. 
+
+![the console](console_screen_shot.png)
+
+When you type a line of code into the consult and hit enter the command gets _executed_. For example, try typine
+
+```{r}
+2+3
+```
+
+We can also assign values to variables. Try the following
+
+```{r}
+x <- 2
+y <- 3
+x + y
+```
 
 ## The R ecosystem
 
-When you download R from CRAN you get what we call _base_ R. This includes _functions_ that are considered fundamental for data analysis. It also includes several example datasets. You can see all the dataset by typing
+When you download R from CRAN you get what we call _base_ R. This includes several _functions_ that are considered fundamental for data analysis. It also includes several example datasets. These datasets are particularly useful as examples when we are learning to use the available functions. You can see all the available dataset by executing the function `data` like this:
 
 ```{r,eval=FALSE}
 data()
 ```
 
-An example of a base function is `plot`. Here is an example in which we plot Mauna Loa Atmospheric CO2 Concentration:
+Because in R functions are objects, we need the two parenthesis to let R know that we want the function to be executed as opposed to showing us the code for the function. Type the following and note the difference:
+
+```{r,eval=FALSE}
+data
+```
+
+
+To see na example of functions at work, we will use to `co2` dataset to illustrate the function `plot`, one of the base functions. We can plot Mauna Loa Atmospheric CO2 Concentration versus data like this:
 
 ```{r}
 plot(co2)
 ```
 
-Note that the base functionality is bare bones. The reason for doing this is that data science applications are so broad and the statistical toolbox is so broad that a better approach is to make specific functionality available _on demand_. We do this using _packages_ also called _libraries_. 
+Note that R's base functionality is bare bones. Note that data science applications are broad, the statistical toolbox is extensive, and most users need only a small fraction of all the available functionality. Therefore, a better approach is to make specific functionality available _on demand_.  R does this using _packages_, also called _libraries_. 
+
 Some packages are considered popular enough that they are included with the base download.
 For example, the software implementing the method of survival analysis are in the `survival` package. To bring that functionality to your current session we type
 
@@ -59,18 +89,15 @@ For example, the software implementing the method of survival analysis are in th
 library(survival)
 ```
 
-CRAN has over 4,000 packages that are not included in the base installation. You can install these using the `install.packages` function. We will see an example in the next section.
+However, CRAN has over 4,000 packages that are not included in the base installation. You can install these using the `install.packages` function. 
 
 ## Installing Packages
 
 The first R command we will run is `install.packages`.  R only includes a basic set of
 functions. It can do much more than this, but not everybody needs
 everything so we instead make some functions available via
-packages. Many of these functions are stored in CRAN. Note that these
-packages are vetted: they are checked for common errors and they must have
-a dedicated maintainer. You can easily install packages from within R if you know
-the name of the packages. As an example, we are going to install the
-package `dplyr`  which we use in our first data analysis examples: 
+packages. Many of these functions are stored in CRAN where
+packages are vetted: they are checked for common errors and they must have a dedicated maintainer. There are other repositories, some with more vetting, such as [Bioconductor](http://www.bioconductor.org), and no vetting, such as GitHub. You can easily install CRAN packages from within R if you know the name of the packages. As an example, we are going to install the package `dplyr` which we use in our first data analysis examples: 
 
 ```{r,eval=FALSE}
 install.packages("dplyr")
@@ -92,11 +119,13 @@ install it first.
 
 ## Getting help
 
-A key things you need to know about R is that you can get help for a function using `help` or `?`, like this:
+A key feuature you need to know about R is that you can get help for a function using `help` or `?`, like this:
 ```{r,eval=FALSE}
 ?install.packages
 help("install.packages")
 ```
+
+These pages are quite detailed and also include examples at the end. 
 
 ## Comments
 The hash character represents comments, so text following these
@@ -107,38 +136,18 @@ characters is not interpreted:
 ```
 
 
-## Resources
-
-There are many resources to help you 
-familiarize yourself with the basics of programming and R syntax.  One such tutorial is the [swirl](http://swirlstats.com/) tutorial, which teaches you R programming interactively, at your own pace and in the R console. Once you have R installed, you can install `swirl` and run it the following way: 
-
-```{r, eval=FALSE}
-install.packages("swirl")
-library(swirl)
-swirl()
-```
-
-Alternatively you can take the Data Camp [R course](https://www.datacamp.com/courses/free-introduction-to-r) or 
-[try R](http://tryr.codeschool.com/) interactive class from Code School. 
-
-There are also many open and free resources and reference
-guides for R. Two examples are:
-
-* [Quick-R](http://www.statmethods.net/): a quick online reference for data input, basic statistics and plots
-* R reference card (PDF)[https://cran.r-project.org/doc/contrib/Short-refcard.pdf] by Tom Short 
 
 ## Importing Data into R
 
-The first step when preparing to analyze data is to read in the data into R. There are several ways to do this and we will discuss three of them. But you only need to learn one to follow along. 
+The first step when preparing to analyze data is to read in the data into R. We therefore teach this skill first. There are several ways to do this and we will discuss three of them. But you only need to learn one to follow along. 
 
-In the life sciences, small datasets such as the one used as an
-example in the next sections are typically stored as Excel files. Although there
-are R packages designed to read Excel (xls) format, you generally want
+Small datasets such as the one used as an
+example here are typically stored as Excel files. Although there are R packages designed to read Excel (xls) format, you generally want
 to avoid this and save files as comma delimited (Comma-Separated
 Value/CSV) or tab delimited (Tab-Separated Value/TSV/TXT) files.
-These plain-text formats are often easier for sharing data with
-collaborators, as commercial software is not required for viewing or
+These plain-text formats are often easier for sharing, as commercial software is not required for viewing or
 working with the data.
+
 We will start with a simple example dataset containing the [heights of students in our class](https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv)
 
 The first step is to find the file containing your data and know its *path*. 
@@ -160,10 +169,26 @@ The functions that read and write files (there are several in R) assume you mean
 
 We find that the simplest way to organize yourself is to start a Project in RStudio (Click on "File" and "New Project"). When creating the project, you will select a folder to be associated with it. You can then download all your data into this folder. Your working directory will be this folder.
 
- 
+## Resources
 
+Apart from the two courses lister above, there are many resources to help you 
+familiarize yourself with the basics of programming and R syntax.  One such tutorial is the [swirl](http://swirlstats.com/) tutorial, which teaches you R programming interactively, at your own pace and in the R console. Once you have R installed, you can install `swirl` and run it the following way: 
 
-## More advanced R Resources (from Roger Peng)
+```{r, eval=FALSE}
+install.packages("swirl")
+library(swirl)
+swirl()
+```
+
+[try R](http://tryr.codeschool.com/) interactive class from Code School. 
+
+There are also many open and free resources and reference
+guides for R. Two examples are:
+
+* [Quick-R](http://www.statmethods.net/): a quick online reference for data input, basic statistics and plots
+* R reference card (PDF)[https://cran.r-project.org/doc/contrib/Short-refcard.pdf] by Tom Short 
+
+#### More advanced R Resources (from Roger Peng)
 
 Available from CRAN (http://cran.r-project.org)
 
