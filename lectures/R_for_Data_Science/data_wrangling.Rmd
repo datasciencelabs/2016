@@ -250,7 +250,6 @@ We can now test the function
 ```{r}
 fixheight( "70")
 fixheight( "5'10")
-fixheight( "5'10")
 fixheight( c("5'9","70","5'11"))
 ```
 
