@@ -3,7 +3,7 @@ title: "Distributions and basic exploratory data analysis"
 output: html_document
 ---
 
-```{r,echo=FALSE,warning=TRUE}
+```{r,echo=FALSE, warning=FALSE}
 fixheight <- function(x){
   y <- strsplit(x, "'")
   ret <- sapply(y, function(z){
@@ -13,8 +13,8 @@ fixheight <- function(x){
   return(ret)
 }
 
-library(dplyr)
-library(readr)
+suppressMessages(library(dplyr))
+suppressMessages(library(readr))
 url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
 dat <- read_csv(url)
 names(dat) <- c("time","gender","height")
@@ -236,7 +236,7 @@ We can compute the percentiles for male heights and for the normal distribution:
 ```{r qqplot_example1, fig.cap="First example of qqplot. Here we compute the theoretical quantiles ourselves."}
 ps <- ( seq(0,99) + 0.5 )/100 
 qs <- quantile(x, ps)
-normalqs <- qnorm(ps, mu, sd)
+normalqs <- qnorm(ps, mu, sigma)
 plot(normalqs,qs,xlab="Normal percentiles",ylab="Height percentiles")
 abline(0,1) ##identity line
 ```
@@ -254,7 +254,7 @@ However, the `qqnorm` function plots against a standard normal distribution. Thi
 
 ```{r}
 qqnorm(dat$height)
-qqling(dat$height)
+qqline(dat$height)
 ```
 
 We can split it into the two genders and see slighlty better fits (excpet for the tails)
