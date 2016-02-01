@@ -214,11 +214,9 @@ pnorm(3)-pnorm(-3)
 
 Assessment: Use the normal approximation to determine what proportion of US men are as tall or taller as Michael Jordan? 
 
-##ctrl-alt-i Windows
-##command-option-i Mac gives you this:
-```{r}
+#### Note 
+The keyboard shortcut to instert a code-chunk in R is ctrl-alt-i in Windows and command-option-i Mac
 
-```
 
 Assessment: In the US, how many more 6'6 or taller men are there than 7 foot or taller? Compute a proportion.
 
