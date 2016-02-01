@@ -54,14 +54,38 @@ dat$Timestamp[2]
 
 #### Quick Review of Vectors
 
-The following simple function may come in handy
+Vector are a sequence of data elements of the same type. Many of the operations used to analyze data are applied to vectors. In R vectors can be numeric, characters or logical. 
 
+The most basic way to creat a vector is with the function `c`
 ```{r}
 x <- c(1,2,3,4,5)
-y <- 1:5
-z <- seq(1,5)
 ```
 
+Two very common ways of generating vectors are using `:` or the `seq` function:
+
+```{r}
+x <- 1:5
+x <- seq(1,5)
+```
+
+Vecotrs can have names
+
+```{r}
+names(x) <- letters[1:5]
+x
+```
+
+
+#### Coercion
+
+Vectors need to be homogenous. But when R is instructed to create a vector of different types, it does not give an error. Instead it tries to _coerce_ values to be the same. Here is an example:
+
+```{r}
+height <- c(60, 59, 55, "5'5", 70)
+height
+```
+
+Note that no warning or error was given. It simply changed everything to a character. This is important to know because sometimes we make a mistake in entering data and receive no error message.
 
 
 ## Data Manipulation wiht `dplyr`
@@ -107,17 +131,18 @@ names(dat) <- c("time","gender","height")
 ## Vectorization
 
 ```{r}
-h <- dat$height
-h[3]
-as.numeric(h[3])
+height <- c(60, 59, 55, "5'5", 70)
+height[3]
+as.numeric(height[3])
 ```
 
 One powerful feature of R is that we can _vectorize_
 most operation
 
 ```{r}
- as.numeric(h) 
+ as.numeric(height) 
 ```
+Note now we do receive an warning. This is because R has no idea how to convert "5'5" to a number.
 
 ## Missing values
 
@@ -155,21 +180,61 @@ Let's see more
 filter(dat, is.na(numeric_height)) %>% select(height) %>% print(n=21)
 ```
 
+#### `gsub`
 
-Let's get rid of `"`
+One of the most useful functions for data wranglin is `gsub`. It let's us searches for characters and substitutes it for others. More general it searches for regular expression. We will learn about those later. 
 
-```{r}
-dat <- mutate(dat, height= gsub("ft","'",height) )
-dat <- mutate(dat, height= gsub("\"|inches|\ ","",height) )
-```
+Here is an example:
 
 ```{r}
-filter(dat, is.na(numeric_height)) %>% select(height) %>% print(n=21)
+x <- dat$height[109:116]
+x
 ```
+
+Note that we are using both `'` and `ft` as the same thing. To simplify the problem we want to substitute one for the other. `gsub` does the trick:
+
+```{r}
+x <- gsub("ft", "'", x)
+x
+```
+
+The word inches is not doing anything here so we might as well remove it.
+```{r}
+x <- gsub("inches","",x)
+x
+```
+
+
+We are now ready to start fixing the height data:
+
+```{r}
+dat <- mutate(dat, height= gsub("ft","'",height) ) %>% 
+  mutate(height= gsub("\"|inches|\ |''","",height) )
+```
+
 
 
 ## Functions 
 
+Up to now we have used prebuilt functions. However, many times we have to construct our own. We can do this in R using the `function`:
+
+```{r}
+avg <- function(x){
+  return( sum(x) / length(x) )
+}
+avg( 1:5 )
+```
+
+Assessment: Construct a function that computes the variance defined as follows for a vector $x_1,\dots,x_n$:
+
+$$ \frac{1}{n} \sum_{i=1}^n ( x_i - \mu)^2 \mbox{ with } \mu=\frac{1}{n}\sum_{i=1}^n x_i
+$$
+
+What is the variance of `1:5` ?
+
+Assessment: Write a function `convert` that takes two character arguments, feet and inches as characters, and returns inches
+
+Here we construct a more complicated function that changes 5'4 to `5*12+4`
 ```{r}
 fixheight <- function(x){
   y <- strsplit(x, "'")
@@ -189,7 +254,16 @@ fixheight( "5'10")
 fixheight( c("5'9","70","5'11"))
 ```
 
+Finally we can mutate our data:
 
 ```{r}
 dat <- mutate(dat, height=fixheight(height)) %>% select(-numeric_height)
 ```
+
+The last call to select removes the now unecessary column `numeric_height`. Let's see the result:
+
+```{r}
+filter(dat, is.na(height)) %>% select(height) 
+```
+
+We have removed all the NAs

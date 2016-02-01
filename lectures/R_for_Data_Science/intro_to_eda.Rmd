@@ -4,15 +4,6 @@ output: html_document
 ---
 
 ```{r,echo=FALSE,warning=TRUE}
-library(dplyr)
-library(readr)
-url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
-dat <- read_csv(url)
-names(dat) <- c("time","gender","height")
-dat <- mutate(dat, numeric_height=as.numeric(height),
-              original=height)
-dat <- mutate(dat, height= gsub("ft","'",height) )
-dat <- mutate(dat, height= gsub("\"|inches|\ ","",height) )
 fixheight <- function(x){
   y <- strsplit(x, "'")
   ret <- sapply(y, function(z){
@@ -21,8 +12,24 @@ fixheight <- function(x){
   })
   return(ret)
 }
-dat <- mutate(dat, height=fixheight(height)) %>% select(-numeric_height)
+
+library(dplyr)
+library(readr)
+url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+dat <- read_csv(url)
+names(dat) <- c("time","gender","height")
+dat <- mutate(dat, numeric_height=as.numeric(height),
+              original=height) %>% 
+  mutate(height= gsub("ft","'",height) ) %>%
+  mutate(height= gsub("\"|inches|\ ","",height) ) %>% 
+  mutate(height=fixheight(height)) %>% select(-numeric_height)
 ```
+
+
+Assessment: Read in the data [here]("https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"). Use the `filter` function to determine how many males and females we have.
+
+Assessment: Use filter and select to obtain a `data.frame` with just male heights. How many NAs do we have when we convert them to numeric?
+
 
 ## Exploratory Data Analysis
 
@@ -127,6 +134,10 @@ hist(dat$height)
 
 Although not quite the same.
 
+Assessment. Wrange the data as we did in class. You can obtain the function to fix heights from [here](https://github.com/datasciencelabs/2016/blob/master/lectures/R_for_Data_Science/fixheight.R)
+
+What is the height of the 113th entry ?
+
 ## Normal Distribution
 
 The histogram provides an excellent summary plot of a distribution. Can we summarize even further? We often see the average and standard deviation used as summary statistics. To understand why these are so widely used we need to undertand the normla distribution.
@@ -181,6 +192,9 @@ How good is the normal approximation?
 
 We can try other values and see that we get very good approximations. Once we know the US adult men have an average height of 69 inches and standard deviation of 3 inches, we know everything: two numbers are all we need to describe the distribution.
 
+Asssessment: If a list of numbers has a distribution that is well approximated by the normal distribution, what proportion of these numbers are within one standard deviation away from the list’s average?
+
+
 ### Standard units
 
 Once we know that a list of numbers follow the normal distribution, a convinent way to describe a value is the number of standard deviations away from the average. We say these values are in _standard units_:
@@ -201,6 +215,12 @@ and most values are within 3
 pnorm(3)-pnorm(-3)
 ```
 
+
+Assessment: Use the normal approximation to determine what proportion of US men are as tall as Michael Jordan? 
+
+Assessment: In the US, how many more 6'6 men are there than 7 footers?
+
+Assessment:  What proportion of 7 footers are in the NBA? Hint: There are 36 7 footers in the NBA. Hint 2: The average height of men 18-35 is  68.5 and SD 3 inches and is approximately normal?
 
 ## Quantile Quantile Plots
 
@@ -248,6 +268,8 @@ women <- filter(dat, gender=="Female")
 qqnorm(women$height)
 qqline(women$height)
 ```
+
+Assessment In our empirical distribution of heights, how many men are taller tha Micael Jordan? Why the discrepency with our answer above?
 
 
 ## Boxplots
