@@ -35,6 +35,6 @@ This is a **TENTATIVE** schedule for the course.
 
 #### Office Hours
 
-This is a schedule for office hours which will start Feb 1. The locations of the office hours will be made available soon. 
+This is a schedule for office hours which will start Feb 1. The locations of the [office hours are available on Canvas](https://canvas.harvard.edu/courses/8329/discussion_topics/90678). 
 
 <iframe src="https://docs.google.com/spreadsheets/d/1lX45-oOBzvCVGdFiEInJPCepQ5F9cd9MkbFHiC_hyHk/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" width="100%" height="700"></iframe>
