@@ -90,7 +90,7 @@ Now we want to join all these files together. Make one consolidated table contai
 
 ## Problem 1.6
 
-Add a column to the consolidated table containing the continent for each country. Hint: We have created a file that maps countries to continents [here](https://github.com/datasciencelabs/data/blob/master/homework_data/continent-info.tsv). Hint: Learn to use the `match` function.
+Add a column to the consolidated table containing the continent for each country. Hint: We have created a file that maps countries to continents [here](https://github.com/datasciencelabs/data/blob/master/homework_data/continent-info.tsv). Hint: Learn to use the `left_join` function.
 
 ```{r}
 # Your code goes here.
