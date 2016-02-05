@@ -1,6 +1,6 @@
 ---
 title: "Homework 1: Insights on Poverty"
-date: "Feburary 4, 2016"
+date: "February 4, 2016"
 output: html_document
 ---
  
