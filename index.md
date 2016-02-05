@@ -24,6 +24,7 @@ title: Introduction to Data Science
 * Ollie McDonald
 * Hilary Parker
 * Joe Paulson
+* Kela Roberts
 * David Robinson
 * Claudio Rosenberg
 * Ayshwarya Subramanian
