@@ -1,0 +1,4 @@
+# ignore Rstudio project files
+
+*.Rproj
+
