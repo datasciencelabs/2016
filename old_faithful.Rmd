@@ -19,6 +19,7 @@ Let's load the `faithful` dataset.
 ```{r}
 data(faithful)
 head(faithful)
+summary(faithful)
 ```
 
 
@@ -50,7 +51,6 @@ faithful %>%
     ylab("Waiting time to next eruption (in mins)") + 
     labs(title="Old Faithful Geyser")
 ```
-
 
 We see that the relationship between these two variables is fairly linear, 
 which suggests that we might use a linear model to predict the waiting 
