@@ -197,6 +197,11 @@ Hint: Look at the `gather()` help file on how to exclude column names.
 ```{r}
 ## Provide your code here
 
+dem_polls %>% 
+    gather(key = candidate, value = percentage, -c(Pollster, `End Date`))
+
+## To select all the columns *except* a specific column, 
+## use the "-" (subtraction) operator (also known as negative indexing)
 ```
 
 
@@ -208,6 +213,10 @@ only ending after May 1, 2015.
 ```{r}
 ## Provide your code here
 
+dem_polls %>% 
+    gather(key = candidate, value = percentage, Clinton:Undecided) %>%
+    filter(candidate %in% c("Clinton", "Sanders", "O'Malley") & 
+           `End Date` >= "2015-05-01")
 ```
 
 #### Assessment (optional)
@@ -218,6 +227,14 @@ of the candiates. Color the lines by the candidate.
 ```{r}
 ## Provide your code here
 
+library(ggplot2)
+
+dem_polls %>% 
+    gather(key = candidate, value = percentage, Clinton:Undecided) %>%
+    filter(candidate %in% c("Clinton", "Sanders", "O'Malley") & 
+           `End Date` >= "2015-05-01") %>% 
+    ggplot(aes(x=`End Date`, y = percentage, color = candidate)) + 
+    geom_line()
 ```
 
 
@@ -229,6 +246,12 @@ and for polls only after May 1, 2015. Color the lines by candidates.
 ```{r}
 ## Provide your code here
 
+rep_polls %>% 
+    gather(key = candidate, value = percentage, Trump:Walker) %>%
+    filter(candidate %in% c("Trump", "Cruz", "Rubio", "Carson", "Bush") & 
+           `End Date` >= "2015-05-01") %>% 
+    ggplot(aes(x=`End Date`, y = percentage, color = candidate)) + 
+    geom_line()
 ```
 
 
@@ -280,6 +303,8 @@ by the "/" character.
 ```{r}
 ## Provide your code here
 
+dem_polls_separate %>% 
+    unite(col = end_date, y, m, d, sep = "/")
 ```
 
 
