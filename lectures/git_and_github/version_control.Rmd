@@ -1,0 +1,641 @@
+---
+title: Version Control with Git
+output: html_document
+author: Stephanie Hicks, Luis Campos
+---
+
+#### Preface
+
+This R Markdown assumes you have successfully installed git and 
+registered for a GitHub username by following along 
+[this tutorial on Setting up Git and GitHub](https://github.com/datasciencelabs/2016/blob/master/lectures/git_and_github/setting_up_git.Rmd). 
+If you have not done so, we suggest you complete those two steps before 
+proceeding with this tutorial.  
+
+We will use git and GitHub to submit homework assignments starting 
+with Homework 2 in BIO 260 and CSCI E-107. In this tutorial, we will 
+introduce to the idea of version control, implementing version control 
+with the tool called `git` and sharing your version controlled code with 
+a tool called GitHub.  
+
+#### Acknowledgements 
+This lab is largely taken from the the 
+[first CS109 lab in 2015](https://github.com/cs109/2015lab1) from 
+Rahul Dave, which is in turn largely taken from 
+[IACS's AC 297s](https://github.com/rdadolf/ac297r-tools-tutorial) course by 
+Robert Adolf. Most of the credit goes to them. 
+
+Additionally, some material was adapted from 
+[Karl Broman's git/GitHub guide](http://kbroman.org/github_tutorial/).  
+
+----
+
+# What is version control? 
+
+Version control is a way of tracking the change history of a project. 
+Even if you have never used a version control tool, you've probably 
+already done it manually: copying and renaming project folders 
+("paper-v1.doc", "paper-v2.doc", "paper-final.doc", 
+"paper_finalFINALdraft.doc", etc.) is a form of version control.
+
+[Git](https://git-scm.com) is a tool that automates and 
+enhances a lot of the tasks that arise when dealing with larger, 
+longer-living, and collaborative projects. It has also become the 
+common underpinning to many popular online code repositories, 
+[GitHub](https://github.com/) being the most popular.
+
+#### Working on the command line
+
+We will be using git on the command line. If you are unfamiliar with 
+working on the command line, read through the [Command line interface](https://github.com/DataScienceSpecialization/courses/tree/master/01_DataScientistToolbox/02_03_commandLineInterface) 
+which is from the [Data Science Specialization](https://github.com/DataScienceSpecialization/courses/tree/master/01_DataScientistToolbox) 
+course on Coursera. There are many other fantastic tutorials for working
+on the command line.   
+
+You can use a [GUI](https://desktop.github.com), but we suggest using the 
+command line. 
+
+#### Resources for learning the basics in git
+
+Next, we will go over the basics of git, but we should point out that 
+many talented people have created git tutorials, and we will not
+get into as great of detail as they have. 
+
+* [Learn Git on Codeacademy (~2hrs to complete)](https://www.codecademy.com/learn/learn-git)
+* [Interactive tutorial to learn git (under 15 mins to complete!)](https://try.github.io/levels/1/challenges/1)
+* [Github guides](https://guides.github.com)
+* [git - the simple guide](http://rogerdudler.github.io/git-guide/)
+* [Github Youtube videos](https://www.youtube.com/user/GitHubGuides)
+* [The Git Book](http://git-scm.com/book/en/v2) by Scott Chacon and Ben Straub
+* [Slides on the Data Science Specialization Coursera course](https://github.com/DataScienceSpecialization/courses/tree/master/01_DataScientistToolbox)
+
+In this document, we will go over the concepts of git that are 
+relevant to this course. 
+**At this point**, we assume that you have successfully installed 
+git as described in [this tutorial on Setting up Git and GitHub](https://github.com/datasciencelabs/2016/blob/master/lectures/git_and_github/setting_up_git.Rmd) 
+and followed the instructions there to create ssh keys for your machine.
+This enables you to use git without a pesky username-password combination. 
+You can continue working without the SSH keys, but every time you `push` 
+you will be asked for your username and password (more on this below). 
+
+----
+
+# Why should you use version control?
+
+If you ask 10 people, you'll get 10 different answers, but one of the 
+commonalities is that most people do not realize how integral it is to 
+their development process until they have started using it. 
+Still, for the sake of argument, here are some highlights:
+
+- **You can undo anything.** Git provides a *complete history* of every 
+change that has ever been made to your project, timestamped, commented, 
+and attributed. If something breaks, you always have the choice of 
+going back to a previous state.
+- **You won't *need* to keep undo-ing things.** One of the advantages 
+of using git properly is that by keeping new changes separate from a 
+stable base, you tend to avoid the massive rollbacks associated with 
+constantly tinkering with a single code.
+- **You can identify exactly when and where changes were made.** Git 
+allows you to pinpoint when a particular piece of code was changed, 
+so finding what other pieces of code a bug might affect or figuring 
+out why a certain expression was added is easy.
+- **Git forces teams to face conflicts directly.** On a team-based 
+project, many people are often working with the same code. 
+By having a tool which understands when and where files were changed, 
+it's easy to see when changes might conflict with each other. 
+While it might seem troublesome sometimes to have to deal with 
+conflicts, the alternative&mdash;*not* knowing there's a 
+conflict&mdash;is much more insidious.
+
+----
+
+# Git Basics
+
+### A basic `git` routine
+
+The most basic routine use of git involves the repetition of a few commands: 
+
+1. `git add`
+2. `git commit`
+3. `git push`
+
+(`git status` is also extremely useful)
+
+### Using `git` for version control
+
+The first thing to understand about git is that the contents of your 
+project are stored in several different states and forms at any given time.
+If you think about what version control is, this might not be 
+surprising: in order to remember every change that has ever been made, 
+you need to store a record of those changes *somewhere*, and to be 
+able to handle multiple people changing the same code, you need 
+to have different copies of the project and a way to combine them.
+
+You can think about git operating on four different areas:
+
+![Git Commands](./images/git_layout.png)
+
+You will move your code between these different areas using the basic 
+`git` routine described above. 
+
+![git commands](https://www.silverpeas.org/images/git_everthing_is_local.png)
+
+- The **working directory** is what you are currently looking at. 
+ When you modify a file that is stored in the working directory on your
+ computer, the changes are made locally to the working directory.
+- The **staging area** is a place to collect a set of changes 
+ made to your project. If you have changed three files to fix a bug, 
+ you will add all three to the staging area so that you can remember 
+ the changes as one historical entity. It is also called the **index**. 
+ You move files from the working directory to the index 
+ using the command `git add`.
+- The **local repository** is the place where git stores everything 
+ you have ever done to your project. Even when you delete a file, a copy 
+ is stored in the repo (this is necessary for always being able to 
+ undo any change). It is important to note that a local repository 
+ does not look much at all like your project files or directories. 
+ Git has its own way of storing all the information, and if you are 
+ curious what it looks like, look in the `.git` directory in the working 
+ directory of your project. Files are moved from the index to the 
+ local repository via the command `git commit`.
+- When working in a team, every member will be working on their own 
+local repository. An **upstream repository** allows everyone to agree 
+on a single version of history. If two people have made changes on their 
+local repositories, they will combine those changes in the upstream 
+repository. In our case this upstream repository is hosted by GitHub. 
+This upstream repository is also called a **remote** in git jargon. 
+The standard github remote is named the **origin**. This repository 
+is given a web page on GitHub. One usually moves code from the local 
+repository to the remote repository using `git push`, and in the other 
+direction using `git fetch`.
+
+You can think of most git operations as moving code (or other metadata) 
+between the local and remote repositories.
+
+----
+
+# Common version control tasks
+
+We will start by working with a 
+test repository called `test_repo` on the [datasciencelabs GitHub page](https://github.com/datasciencelabs/test_repo). 
+
+
+## Forking a repository
+
+Forking a repository is done on GitHub. It brings the repository that 
+you are forking from the existing namespace, e.g. `datasciencelabs` 
+to your namespace `your-GitHub-username`. It will ask you where 
+you want to _fork to_, choose your own namespace. It will copy 
+the entire repository over, and you will have a fresh new copy. 
+
+#### Your turn
+
+Go to the [`test_repo` on GitHub](https://github.com/datasciencelabs/test_repo) 
+and fork the repository. You will get a unique webpage 
+(`https://github.com/<your-GitHub-username>/test_repo`) for your newly
+minted repository on your GitHub page.
+
+## Cloning a repository using `git clone`
+
+Now that we have a **fork** of the `datasciencelabs/test_repo`, 
+let's **clone** it down to our local computers. You do this step only once 
+when you start working with a new projects or repository. 
+
+`git clone`
+
+![clone](./images/git_clone.png)
+
+Cloning a repository does two things: it takes a repository from 
+somewhere (usually an **upstream repository**, here the upstream 
+repository is your forked repository of the `test_repo` on GitHub) 
+and makes a local copy (your new **local repository**), and it 
+creates the most recent copy of all of the files in the project 
+(your new **working directory**). This is generally how you will 
+start working on a project for the first time.
+
+Cloning a repository depends a lot on the type of repository that you 
+are using. If you are cloning out of a directory on the machine that 
+you are currently on, it is just the path to the `<project>.git` file. 
+For github, you can clone over *ssh* using the SSH clone url if you 
+have set up your ssh keys. If you have not set up your ssh keys, 
+use *https* instead.
+
+
+#### Your turn
+
+In your working directory on the command line or terminal 
+on your computer, type
+
+> `$ git clone https://github.com/<your-GitHub-username>/test_repo.git`
+
+This copies all the files from GitHub and puts them on your own computer.
+
+---
+
+
+## Exploring the new repository
+
+Now, we have a new forked repository called `test_repo` on GitHub and 
+we have cloned a copy of the `test_repo` to our local machines. 
+Let's look around in it.
+
+#### Print log of actions using `git log`
+
+Every action we take in a version controlled repository
+creates a unique identifier for all the 
+actions that have happened to this repository previously. 
+We shall soon see how to add our own actions in the repository. 
+To see a list of actions that have been taken up until now, use the 
+`git log` command. 
+
+> `$ git log`
+
+If you ever need help on a command, you can find the git help 
+page by typing: 
+
+> `$ git --help`
+
+For help with a specific function (e.g. `git clone`), type: 
+
+> `$ git clone --help`
+
+
+#### Check on state of project using `git status` 
+
+To check on the current state of your project, you can use the `git status` 
+command. It will tell you which files you have changed and 
+which files you currently have in your staging area (or index).
+
+`git status`
+
+![status](./images/git_status.png)
+
+
+#### Check on any special configuations in your repository
+
+Configuration information is stored in a special file `config`, 
+in a hidden folder called `.git` in your working directory. To see the 
+configuration file type: 
+
+> `$ cat .git/config`
+
+This file tells us about a **remote** (i.e. an upstream 
+repository) called "origin", which is the github repository 
+we cloned from. Therefore, the process of cloning left us 
+with a **remote**. 
+
+Another way to see a list of the remote repositories is to 
+use the `git remote` command. 
+
+#### Your turn
+
+In the working directory, type: 
+
+> `$ git remote -v`
+
+This will list the URL locations of the **remotes** in your working
+directory.
+
+#### The `.gitignore` file
+
+In most repositories, there will be a file called `.gitignore`. This is 
+a hidden file in the `test_repo` repository. The purpose of the file
+is to tell us what files we need to ignore when adding files to the 
+**index** (or staging area) before we commit the changes in our 
+local repository. We use this file to ignore temporary data files
+and such when working in our repository. 
+
+To see what is in the `.gitignore` file, type: 
+
+> `$ cat .gitignore`
+
+----
+
+## Making changes in your repository
+
+Now that we have explored our respository a bit, let's try to 
+make some changes to the repository. 
+
+#### Move files from working directory to staging area using `git add`
+
+When you have made a change to a set of files and are ready to 
+create a commit, the first step is to add all of the changed 
+files to the **staging area** (or the **index**). We use the 
+`git add` command for this.  Remember that what you see in the 
+filesystem is your working directory, so the way to see what's in 
+the staging area is with the `git status` command. This also means 
+that **if you add something to the staging area and then edit it again, you'll also need to add the file to the staging area again if you want to remember the new changes**.
+
+`git add`
+
+![add](./images/git_add.png)
+
+#### Your turn
+
+In the `test_repo` working directory, open one of the files (e.g. 
+`old_faithful.Rmd`) and make some type of change. Once you have made 
+the change, go back to the command line and type: 
+
+> `$ git status`
+
+This will return a list of files that have been modified, but not
+moved to the staging area (colored in red). 
+
+To move the file to the staging area, e.g. type: 
+
+> `$ git add old_faithful.Rmd`
+
+This will return a list of files that have been moved to the 
+**staging area** (colored in green).
+
+**Note**: You can use `git add .` to add all new files and changed files to the 
+index, which is particularly useful if you have created multiple new files.
+
+#### Move files from staging area to local repository using `git commit`
+
+When you are satisfied with the changes that you have added to 
+your staging area, you can commit those changes to your 
+local repository with the `git commit` command. Those changes 
+will have a permanent record in the repository from now on.
+
+`git commit`
+
+![commit](./images/git_commit.png)
+
+Every commit has two features you should be aware of. The first is a
+**hash**. This is a unique identifier for all of the information about 
+that particular commit, including the code changes, the timestamp, 
+and the author. The second is a **commit message**. This is text that 
+you can (and should) add to a commit to describe what the changes were. 
+
+To see a list of the commits and commit messages, remember that you 
+can use the `git log` command. 
+
+#### Your turn
+
+In the `test_repo` working directory, type: 
+
+> `$ git commit -m "<Insert an informative commit message here>"`
+
+
+#### Good commit messages are important
+
+Commit messages are a way of quickly telling your future self 
+(and your collaborators) what the commit was about. For even a 
+moderately sized project, digging through tens or hundreds of commits 
+to find the change that you are looking for is a nightmare without 
+friendly summaries.
+
+By convention, commit messages start with a single-line summary, 
+then an empty line, then a more comprehensive description of the changes.
+
+[This](https://github.com/rdadolf/clangtool/commit/bdd8f1290146c28a4cb05b62ccb0ffbaaa314ff7) is an okay commit message. The changes are small, and the summary is sufficient to describe what happened.
+
+[This](https://github.com/rdadolf/protos/commit/9fcbe1084b17027e003c62043d764ed5551ddadc) is better. The summary captures the important information (major shift, direct vs. helper), and the full commit message describes what the high-level changes were.
+
+[This](https://github.com/rdadolf/autopaxos/commit/d43dd9b0a699c98bd142ba7cbc1836fbc4eba2ac). Don't do this.
+
+
+#### Move changes from local repository to upstream repository using `git push`
+
+To move the changes from your local repository on your computer to the 
+**upstream repository** (or **remote**) on GitHub, use the `git push` 
+command. 
+
+`git push`
+
+![push](./images/git_push.png)
+
+If you are the only person working with both of these repositories 
+(e.g. in a solo GitHub project), then `git push` should always work. 
+
+**Note:** If multiple people are working together on a project, 
+you will each make changes on your local repositories. 
+If one of you has made changes to the upstream repository 
+(or **remote**) by committing changes between the time you 
+first cloned it and now, then the `git push` command will fail.  
+
+#### Your turn
+
+After you have committed your changes in the `test_repo` working 
+directory, type: 
+
+> `$ git push`
+
+If you go to your GitHub page on the web, you can see the changes
+that have now between pushed to your remote repository 
+(e.g. `https://github.com/<your-GitHub-username>/test_repo`)
+
+
+## Working with remote repositories and `fetch`ing from them
+
+If you are working with multiple people on a project, then it is
+possible that one of you has made changes to the upstream or remote 
+repository by committing changes from their local repository to the remote 
+repository between the time you first cloned it and now. 
+In this case, `git push` will fail. 
+
+In our particular case of the `test_repo` repository, this is not 
+going to happen, since you just cloned it and presumably have not
+invited anyone to collaborate with you on it (you can do this 
+from the settings link on the right side of the remote repository page). 
+
+However, you can imagine a situtation where your collaborator has 
+**pushed** changes to a shared upstream repository  
+(e.g. `<your-GitHub-username>/test_repo`) while you were editing files 
+in your local repository. Their local repository and the upstream 
+repository now both contain their changes, but your local repository 
+does not. To update your local repository, you can use 
+a combination of two commands: `git fetch` and `git merge`.
+
+#### First: Use `git fetch` to download changes from a remote repository 
+
+The upstream repository that is shared by you and your collaborators 
+is most likely named "origin". The URL of the remote repository 
+can be found using `git remote -v`.  
+
+`git fetch `
+
+![fetch](./images/git_fetch.png)
+
+Assume you and your collaborator both edited the same line of the same 
+file at the same time in different ways. On your respective machines, 
+you both add and commit your different changes, and your collaborator
+pushes theirs to the upstream repository. When you run `git fetch`, 
+git adds a record of their changes to your local repository 
+*alongside* your own. 
+
+These are called **branches**, and they represent different, 
+coexisting versions of your project. The `git fetch` command adds your 
+collaborator's branches (or sets of changes) to your local repository, 
+but keeps yours as well.
+
+> `$ git fetch`
+
+#### Second: Merge two developmental histories using `git merge`
+
+Having multiple branches is fine, but at some point, you will want 
+to combine the changes that you have made with those made by others. 
+This is called **merging**. To merge the changes from your collaborator
+use the `git merge` command: 
+
+> `$ git merge origin/master`
+
+There are two general cases when merging two branches: 
+
+1. The two branches are different but the changes are in unrelated places
+2. The two branches are different and the changes are in the same 
+locations in the same files
+
+The first scenario is easy. Git will simply apply both sets of changes 
+to the appropriate places and put the resulting files into the 
+staging area for you. Then you can commit the changes and push them 
+back to the upstream repository. Your collaborator does the same, 
+and everyone sees everything.
+
+The second scenario is more complicated. Let's say the two changes 
+set some variable to different values. Git does not know which is the 
+correct value. One solution would be to simply use the more recent 
+change, but this very easily leads to self-inconsistent programs. 
+A more conservative solution, and the one git uses, is to simply 
+leave the decision to the user. When git detects a conflict that 
+it cannot resolve, `merge` fails, and git places a modified version 
+of the offending file in your project directory. 
+
+`git merge`
+
+![merge](./images/git_merge.png)
+
+**This is important:** The file that git puts into your directory 
+is not actually *either* of the originals. It is a new file that has 
+special markings around the locations that conflicted. We shall not 
+consider this case in this lab, deferring it to a time just before 
+you work with other collaborators on your projects.
+
+
+## Add another remote to our local repository using `git remote`
+
+Until now, we have worked with our local repository and our upstream 
+repository (`<your-GitHub-username>/test_repo`) 
+that we forked from `datasciencelabs/test_repo`. This means
+we have been working with one upstream repository (or **remote** 
+repository) that was named `origin`. 
+
+However, you can imagine that the original repository that you forked
+(`datasciencelabs/test_repo`), which you are now divorced from,
+has changed, and that you some how want to pull those changes in. 
+
+Now we will add another remote URL, which we shall call `course`, 
+which points to the original repository (`datasciencelabs/test_repo`) 
+that we forked from. If changes are made on this original repository, 
+you may want to pull these changes into your local repository on your
+computer. Here we will also use `git fetch` and `git merge` to 
+add changes from original repository that was forked. 
+
+To add another remote URL pointing to the original repository, use 
+the `git remote add` command and type: 
+
+> `$ git remote add course https://github.com/datasciencelabs/test_repo.git`
+
+To see the list of remotes repository locations in our local repository, type: 
+
+> `$ git remote -v`
+
+**Note**: The following only makes sense to do if there are 
+changes made to the original repository (`datasciencelabs/test_repo`). 
+
+We see there are two remote repositories (`origin` and `course`). 
+To merge the changes from the the `course` remote repository, 
+use the following: 
+
+> `$ git fetch course`
+
+> `$ git merge course/master`
+
+> `$ git status`
+
+If there are no conflicts in the merging, then everything should go 
+smoothly. Othewise, you will have to tell git how you want to handle
+the conflicts yourself. 
+
+After merging the changes from the original repository using 
+`git fetch` and `git merge`, we see that we are ahead of our 
+upstream repository. This is because we have incorporated the changes 
+to our local repository, but not to our upstream repository that was forked
+from the original repository.  
+
+To fix this, the last step would be to push the changes our 
+upstream repository (or remote repository) called `origin`.  
+
+> `$ git push`
+
+> `$ git status`
+
+**Important**: You can combine a `git fetch` and a `git merge` together by 
+simply doing a git `git pull`. This will fail if you and your collaborator 
+have worked on the same file (since you will have to merge by hand), 
+but is a great shortcut when the files worked on are different. 
+The command is commonly used if you are working on a project alone 
+or if you shifting work between comptuers (e.g. the usual use case is 
+day work on a work computer, and then evening work at home on the laptop). 
+Read the docs if you are interested.
+
+
+## Assessment
+### Fork and clone the `datasciencelabs/2016` repository on GitHub
+
+The lectures and homework assignments for this course are housed in the 
+[`datasciencelabs/2016` repository on GitHub](https://github.com/datasciencelabs/2016). 
+Until today, if you were unfamiliar with using git and GitHub, you probably 
+have manually downloaded the R Markdown files for each lecture.  
+
+For this assessment:
+
+1. Go to [https://github.com/datasciencelabs/2016](https://github.com/datasciencelabs/2016)
+2. Fork the repository to your own GitHub namespace (e.g. this will create `https://github.com/<your-GitHub-username>/2016`). 
+3. Use `git clone` to clone the `2016` remote repository to your own computer. 
+**This step only needs to be completed once.**
+4. In the terminal, look at the list of remote repositories using 
+`git remote -v`. This should show that you have one remote repository called 
+"origin" at `https://github.com/<your-GitHub-username>/2016.git`. 
+5. As changes are made to the original repository that you just forked from 
+at `datasciencelabs/2016`, you may want to pull in these changes over the 
+semester. Use `git remote add` to add another remote URL, 
+which we shall call `course`. To add the remote URL, use `git remote add course https://github.com/datasciencelabs/2016.git`. **This step only needs to be completed once.**
+
+**These last two steps will be repeated throughout the semester.**
+
+6. As course material is added to [https://github.com/datasciencelabs/2016](https://github.com/datasciencelabs/2016)
+over the semster, use `git fetch course` and `git merge course/origin` 
+to pull in the changes into your local repository on your computer.
+7. If you decide to make changes to your local repository, use the basic `git` 
+routine (`git add`, `git commit`, `git push`). **Note**: `git push` will 
+keep your own remote repository `<your-Github-username>/2016` up to date. 
+
+
+# Good Git habits
+
+#### Commit early, commit often
+
+Git is more effective when used at a fine granularity. For starters, you can't undo what you haven't committed, so committing lots of small changes makes it easier to find the right rollback point. Also, merging becomes a lot easier when you only have to deal with a handful of conflicts.
+
+#### Commit unrelated changes separately
+
+Identifying the source of a bug or understanding the reason why a particular piece of code exists is much easier when commits focus on related changes. Some of this has to do with simplifying commit messages and making it easier to look through logs, but it has other related benefits: commits are smaller and simpler, and merge conflicts are confined to only the commits which actually have conflicting code.
+
+#### Do not commit binaries and other temporary files
+
+Git is meant for tracking changes. In nearly all cases, the only meaningful difference between the contents of two binaries is that they are different. If you change source files, compile, and commit the resulting binary, git sees an entirely different file. The end result is that the git repository (which contains a complete history, remember) begins to become bloated with the history of many dissimilar binaries. Worse, there's often little advantage to keeping those files in the history. An argument can be made for periodically snapshotting working binaries, but things like object files, compiled files, and editor auto-saves are basically wasted space.
+
+#### Ignore files which should not be committed
+
+Git comes with a built-in mechanism for ignoring certain types of files. Placing filenames or wildcards in a `.gitignore` file placed in the top-level directory (where the `.git` directory is also located) will cause git to ignore those files when checking file status. This is a good way to ensure you don't commit the wrong files accidentally, and it also makes the output of `git status` somewhat cleaner.
+
+#### Write good commit messages
+
+I cannot understate the importance of this.
+
+#### Seriously. Write good commit messages.
+
+
+![git](https://imgs.xkcd.com/comics/git.png)
