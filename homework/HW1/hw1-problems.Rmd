@@ -1,0 +1,213 @@
+---
+title: "Homework 1: Insights on Poverty"
+date: "February 4, 2016"
+output: html_document
+---
+ 
+**This homework is due Sunday February 14, 2016 at 11:59 PM. When complete, submit your code in the R Markdown file and the knitted HTML file on Canvas.**
+
+
+# Background
+
+This HW is based on Hans Rosling talks [New Insights on Poverty](https://www.ted.com/talks/hans_rosling_reveals_new_insights_on_poverty?language=en) and [The Best Stats You've Ever Seen](https://www.ted.com/talks/hans_rosling_shows_the_best_stats_you_ve_ever_seen). 
+
+The assignment uses data to answer specific question about global health and economics. The data contradicts commonly held preconceived notions. For example, Hans Rosling starts his talk by asking: (paraphrased) "for each of the six pairs of countries below, which country do you think had the highest child mortality in 2015?" 
+
+1. Sri Lanka or Turkey
+2. Poland or South Korea
+3. Malaysia or Russia
+4. Pakistan or Vietnam
+5. Thailand or South Africa
+
+Most people get them wrong. Why is this? In part it is due to our preconceived notion that the world is divided into two groups: the
+_Western world_ versus the _third world_, characterized by "long life,small family" and "short life, large family" respectively. In this homework we will use data visualization to gain insights on this topic.  
+
+
+# Problem 1
+
+The first step in our analysis is to download and organize the data. The necessary data to answer these question is available on the [gapminder](http://www.gapminder.org/data/) website. 
+
+## Problem 1.1
+
+We will use the following datasets:
+
+1.     [Childhood mortality](http://spreadsheets.google.com/pub?key=0ArfEDsV3bBwCcGhBd2NOQVZ1eWowNVpSNjl1c3lRSWc&output=csv)
+2.     [Life expectancy](http://spreadsheets.google.com/pub?key=phAwcNAVuyj2tPLxKvvnNPA&output=csv)
+3.     [Fertility](http://spreadsheets.google.com/pub?key=phAwcNAVuyj0TAlJeCEzcGQ&output=csv)
+4.     [Population](http://spreadsheets.google.com/pub?key=phAwcNAVuyj0XOoBL_n5tAQ&output=csv)
+5.     [Total GDP](http://spreadsheets.google.com/pub?key=pyj6tScZqmEfI4sLVvEQtHw&output=csv)
+
+Create five `tbl_df` table objects, one for each of the tables provided in the above files. Hints: Use the `read_csv` function. Because these are only temporary files, give them short names.
+```{r,include=FALSE}
+# Put your code here.
+```
+
+
+## Problem 1.2
+
+ Write a function called `my_func` that takes a table as an argument and returns the column name. For each of the five tables, what is the name of the column containing the country names? Print out the tables or look at them with `View` to determine the column.
+
+```{r}
+# Your code goes here.
+```
+
+## Problem 1.3 
+
+In the previous problem we noted that gapminder is inconsistent in naming their country column. Fix this by assigning a common name to this column in the various tables.
+
+```{r}
+# Your code goes here.
+```
+
+## Problem 1.4 
+
+Notice that in these tables, years are represented by columns. We want to create a tidy dataset in which each row is a unit or observation and our 5 values of interest, including the year for that unit, are in the columns. The unit here is a country/year pair and each unit gets values:
+
+```{r}
+# Your code goes here.
+```
+
+We call this the _long_ format. Use the `gather` function from the `tidyr` package to create a new table for childhood mortality using the long format. Call the new columns `year` and `child_mortality`
+
+```{r}
+# Your code goes here.
+```
+
+Now redefine the remaining tables in this way.
+
+```{r}
+# Your code goes here.
+```
+
+
+## Problem 1.5
+
+Now we want to join all these files together. Make one consolidated table containing all the columns
+
+```{r}
+# Your code goes here.
+```
+
+## Problem 1.6
+
+Add a column to the consolidated table containing the continent for each country. Hint: We have created a file that maps countries to continents [here](https://github.com/datasciencelabs/data/blob/master/homework_data/continent-info.tsv). Hint: Learn to use the `left_join` function.
+
+```{r}
+# Your code goes here.
+```
+
+# Problem 2 
+
+Report the child mortalilty rate in 2015 for these 5 pairs:
+
+1. Sri Lanka or Turkey
+2. Poland or South Korea
+3. Malaysia or Russia
+4. Pakistan or Vietnam
+5. Thailand or South Africa
+
+```{r}
+# Your code goes here.
+```
+
+# Problem 3
+
+To examine if in fact there was a long-life-in-a-small-family and short-life-in-a-large-family dichotomy,  we will visualize the average number of children per family (fertility) and the life expectancy for each country.
+
+## Problem 3.1 
+
+Use `ggplot2` to create a plot of life expectancy versus fertiltiy for 1962 for Africa, Asia, Europe, and the Americas. Use color to denote continent and point size to denote population size:
+
+```{r}
+# Your code goes here.
+```
+
+Do you see a dichotomy? Explain.
+
+## Problem 3.2
+
+Now we will annotate the plot to show different types of countries. 
+
+Learn about OECD and OPEC. Add a couple of columns to your consolidated tables containing a logical vector that tells if a country is OECD and OPEC respectively. It is ok to base membership on 2015.
+
+```{r}
+# Your code goes here.
+```
+
+### Problem 3.3
+
+Make the same plot as in Problem 3.1, but this time use color to annotate the OECD countries and OPEC countries. For countries that are not part of these two organization annotate if they are from Africa, Asia, or the Americas.
+
+```{r}
+# Your code goes here.
+```
+
+How would you describe the dichotomy?
+
+
+### Problem 3.4
+
+Explore how this figure changes across time. Show us 4 figures that demonstrate how this figure changes through time.
+
+```{r}
+# Your code goes here.
+```
+
+Would you say that the same dichotomy exists today? Explain:
+
+## Problem 3.5 (Optional)
+
+Make an animation with the `gganimate` package.
+
+```{r, eval=FALSE}
+# Your code goes here.
+```
+
+
+# Problem 4 
+Having time as a third dimension made it somewhat difficult to see specific country trends. Let's now focus on specific countries.
+
+## Problem 4.1
+Let's compare France and its former colony Tunisia. Make a plot of fertility versus year with color denoting the country. Do the same for life expecancy. How would you compare Tunisia's improvement compared to France's in the past 60 years? Hint: use `geom_line`
+ 
+```{r}
+# Put your code here.
+```
+
+## Problem 4.2
+
+Do the same, but this time compare Vietnam to the OECD countries.
+
+```{r}
+# Put your code here.
+```
+
+
+# Problem 5
+
+We are now going to examine GDP per capita per day.
+
+## Problem 5.1
+
+Create a smooth density estimate of the distribution of GDP per capita per day across countries in 1970. Include OECD, OPEC, Asia, Africa, and the Americas in the computation. When doing this we want to weigh countries with larger populations more. We can do this using the "weight"" argument in `geom_density`. 
+
+```{r,warning=FALSE}
+# Your code goes here.
+```
+
+## Problem 5.2
+
+Now do the same but show each of the five groups separately.
+
+```{r,warning=FALSE}
+# Your code goes here.
+```
+
+
+## Problem 5.3
+
+Visualize these densities for several years. Show a couple of of them. Summarize how the distribution has changed through the years.
+
+```{r,warning=FALSE}
+# Put your code here.
+```
