@@ -116,6 +116,9 @@ and have a body weight of greater than 1 kilogram
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    select(-(genus:conservation)) %>% 
+    filter(sleep_total >= 16, bodywt >= 1)
 ```
 
 #### Assessment
@@ -127,6 +130,11 @@ Create labels for the `x` and `y` axis.
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    mutate(rem_proportion = sleep_rem / sleep_total) %>%
+    ggplot(aes(x = vore, y = rem_proportion, fill = vore)) + 
+        geom_boxplot() + xlab("Type of diet") + 
+        ylab("Proportion") + labs(title = "Proportion of rem sleep")
 ```
 
 
@@ -145,6 +153,11 @@ position.
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    select(starts_with("sl"), ends_with("wt")) %>%
+    mutate(rem_proportion = sleep_rem / sleep_total, 
+           bodywt_grams = bodywt * 1000) %>%
+    slice(20:30)
 ```
 
 
@@ -169,6 +182,9 @@ Hint: look at the `?arrange` help file for the `desc()` option.
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    select(matches("sleep")) %>% 
+    arrange(desc(sleep_rem))
 ```
 
 #### Assessment
@@ -180,6 +196,10 @@ filter the rows for mammals that sleep for a total of 16 or more hours.
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    select(name, order, sleep_total) %>%
+    arrange(order, desc(sleep_total)) %>% 
+    filter(sleep_total >= 16)
 ```
 
 
@@ -211,6 +231,11 @@ total number of mammals.
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    summarise(avg_sleep = mean(sleep_total), 
+              min_sleep = min(sleep_total),
+              max_sleep = max(sleep_total),
+              total = n())
 ```
 
     
@@ -264,6 +289,12 @@ in each order.
 ```{r}
 ## Provide your code here
 
+msleep %>% 
+    group_by(order) %>%
+    summarise(avg_sleep = mean(sleep_total), 
+              min_sleep = min(sleep_total), 
+              max_sleep = max(sleep_total),
+              total = n())
 ```
 
 
@@ -271,16 +302,19 @@ in each order.
 # joining two data frames in `dplyr`
 
 The last part of `dplyr` that we will discuss are a set of `dplyr` 
-verbs that allow you to join two data sets.
+verbs that allow you to join two data sets. The following are cartoons
+extracted from [Data Wrangling with dplyr and tidyr Cheatsheet from RStudio ](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+to illustrate the different ways to join data frames using `dplyr`. 
 
-`dplyr` verbs to join two tables (`x`, `y`) | Description
---- | ---
-`inner_join(x, y)` | join data (retain only rows in both sets)
-`left_join(x, y)` | join matching rows from `y` to `x`
-`right_join(x, y)` | join matching rows from `x` to `y`
-`full_join(x, y)` | join data (retain all values, all rows)
-`semi_join(x, y)` | all rows in `x` that match in `y`
-`anti_join(x, y)` | all rows in `x` that do have a match in `y`
+![dplyr two tables](pics/dplyr_two_tables.png)
+
+### Two types of functions to join together data frames
+
+
+![dplyr mutating joins](pics/dplyr_mutating_joins.png)
+
+
+![dplyr filtering joins](pics/dplyr_filtering_joins.png)
 
 
 ## Data
@@ -418,6 +452,14 @@ Hint: Read the help file for `anti_join()`.
 
 ```
 
+
+### Other functions in `dplyr` to join together data frames 
+
+
+![dplyr set operations](pics/dplyr_set_operations.png)
+
+
+![dplyr filtering joins](pics/dplyr_binding.png)
 
 
 
