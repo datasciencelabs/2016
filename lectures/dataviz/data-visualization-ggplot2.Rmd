@@ -213,6 +213,13 @@ Assessment: What is the argument used to add a label to the y-axis?
 
 Assessment: What is the argument used to add a label to the title?
 
+```{r}
+qplot(x = gdpPercap, y = lifeExp, 
+      data = filter(gapminder, year==2007), 
+      xlab = "GDP per Capita", 
+      ylab = "Life Expectancy", 
+      main = "Data from Gapminder")
+```
 
 From this plot, we see that there is a wide variability in life expectancy 
 for the lower income countries and then somewhat of a positive trend. However, there are many countries with incomes below 5,000 dollars per 
@@ -249,11 +256,11 @@ p <- ggplot(filter(gapminder, year==2007))
 or a ggplot object with a dataset and `x` and `y` defined
 
 ```{r}
-p <- ggplot(gapminder, aes(x=gdpPercap, y = lifeExp))  
+p <- ggplot(filter(gapminder, year==2007),aes(x=gdpPercap, y = lifeExp))  
 ```
 
 ```{r, eval = FALSE}
-p   ## generates an error. Why? 
+p
 ```
 
 #### Creating your first ggplot()
@@ -273,27 +280,34 @@ Earlier we noticed that there are many countries with incomes below 5,000 dollar
 person and it is hard to see differences between these. We can examine just this variable with a histogram. Here we would use a different geometry:
 
 ```{r}
-p <- ggplot(gapminder, aes(gdpPercap)) 
-p +geom_histogram()
+p <- ggplot(filter(gapminder, year==2007),
+            aes(gdpPercap)) 
+p2 <- p + geom_histogram()
 ```
 
 Here we get a message telling us that the number of bins was chose to be 30. How can we change it?
 
 Assessment: Read the help file for `geom_histogram` and make a histogram with smaller bins:
-
+```{r}
+p  + geom_histogram(binwidth=1000)
+```
 
 The histogram shows very large tails. We may do better by transforming the data. For data like this, the log transformation seems to work well. It also has a nice economic interpretation related to percent growth: in $log_10$ a change of 1 means the country is 10 times richer.
 
 So how do we make the x-axis in the log scale? It is convenient to have [this](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) cheat sheet around when using ggplot2. From there we see that `scale_x_log10` does what we want.
 
 ```{r}
-p <- ggplot(gapminder, aes(gdpPercap)) + geom_histogram(bins=25) + scale_x_log10()
+p <- ggplot(filter(gapminder,year==2007), aes(gdpPercap)) + geom_histogram(bins=25) + scale_x_log10()
 p
 ```
 We no longer see extreme tails. The scatter plot now looks much more informative:
 
 Assessment: Remake the scatter plot but now make sure the x-axis is in a log-scale
-
+```{r}
+p <- ggplot(filter(gapminder, year==2007), 
+            aes(gdpPercap, y=lifeExp)) 
+p + geom_point() + scale_x_log10()
+```
 
 We can also do this:
 ```{r}
@@ -336,7 +350,7 @@ faceting. The idea is simply to split up your data by one or more variables and 
 
 ```{r}
 p + geom_point() +
-  facet_wrap(~continent) + scale_x_log10()
+  facet_wrap("continent") + scale_x_log10()
 ```
 
 To take a closer look, letting the scale of the axis change, we can add the following argument:
@@ -346,9 +360,22 @@ p + geom_point() +
   facet_wrap(~continent, scale="free") + scale_x_log10()
 ```
 
-Assessment: Examine the relationship for years 1910, ..., 2000. Use color to distinguish the continents.
+Assessment: Examine the relationship for years 1952, 1962, ..., 2002. Use color to distinguish the continents.
+```{r}
+years <- seq(1952,2002,10)
+p2 <- ggplot(filter(gapminder, year %in% years),
+             aes(x=gdpPercap,y=lifeExp))
+p2 + geom_point(aes(color=continent)) + facet_wrap(~year) + scale_x_log10()
+```
 
 Assessment. The points seem a bit small. Read the cheat sheet and learn how to increase the size of points.
+
+```{r}
+years <- seq(1952,2002,10)
+p2 <- ggplot(filter(gapminder, year %in% years),
+             aes(x=gdpPercap,y=lifeExp))
+p2 + geom_point(aes(color=continent), size=2) + facet_wrap(~year) + scale_x_log10()
+```
 
 
 These plot clearly shows that the relationship is still present in each continent and year to year.
@@ -364,13 +391,13 @@ p2 + geom_boxplot() + scale_y_log10()
 ```
 
 ```{r}
-p2 <- ggplot(filter(gapminder, year%in%years), 
+p2 <- ggplot(filter(gapminder, year%in%years & country!="Kuwait"), 
             aes(continent, y=gdpPercap)) 
-p2 + geom_boxplot(aes(color=continent)) + facet_grid(.~year)+scale_y_log10()
+p2 + geom_boxplot(aes(fill=continent)) + facet_grid(.~year)+scale_y_log10()
 ```
 
 ```{r}
-p2 <- ggplot(filter(gapminder, year%in%years), 
+p2 <- ggplot(filter(gapminder, year%in%years & country!="Kuwait"), 
             aes(continent, y=gdpPercap)) 
 p2 + geom_jitter(aes(color=continent)) + facet_grid(.~year)+scale_y_log10()
 ```
@@ -378,15 +405,16 @@ p2 + geom_jitter(aes(color=continent)) + facet_grid(.~year)+scale_y_log10()
 ## Densities
 
 ```{r}
-p2 <- ggplot(filter(gapminder, year==1967), 
+p2 <- ggplot(filter(gapminder, year==1967 & country!="Kuwait"), 
             aes(x=gdpPercap/365)) 
 p2 + geom_histogram() + scale_x_log10()
 p2 + geom_density() + scale_x_log10()
 ```
 
 ```{r}
-p2 <- ggplot(filter(gapminder, year%in%c(1967,2007) & continent%in%c("Europe","Asia")), 
+p2 <- ggplot(filter(gapminder, year%in%c(1967,2007) & country!="Kuwait" & continent%in%c("Europe","Asia")), 
             aes(x=gdpPercap/365,fill=continent) )
+p2 + geom_density(alpha=.3) + scale_x_log10()
 p2 + facet_grid(~year)+geom_density(alpha=.3) + scale_x_log10()
 ```
 
