@@ -41,7 +41,7 @@ We find that the simplest way to organize yourself is to start a Project in RStu
 
 
 You can navigate to the file `bio260_heights.csv` in data directory of our data repository:
-[GitHub](https://github.com/datasciencelabs/2016_data). If you navigate to the file, you need to click on *Raw* on the
+[GitHub](https://github.com/datasciencelabs/data). If you navigate to the file, you need to click on *Raw* on the
 upper right hand corner of the data and then use your browser's "Save
 As" function to ensure that the downloaded file is in a CSV
 format. Some browsers add an extra suffix to your file name by
@@ -60,10 +60,10 @@ If you did not receive any message, then you probably read in the file successfu
 
 #### Option 2: Read from within R 
 
-We store many of the datasets used here on [GitHub](https://github.com/datasciencelabs/2016_data). You can actually read these files directly to your R session in the following way:
+We store many of the datasets used here on [GitHub](https://github.com/datasciencelabs/data). You can actually read these files directly to your R session in the following way:
 
 ```{r,message=FALSE}
-filename <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+filename <- "https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv"
 dat <- read.csv(filename)
 ```
 
@@ -73,7 +73,7 @@ Although option 2 is very convenient, you may want to have the data file on your
 
 ```{r}
 library(downloader)
-url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv"
 filename <- basename(url)
 download(url,filename)
 dat <- read.csv(filename)
