@@ -398,6 +398,7 @@ What is the difference?
 ```{r}
 ## Provide your code here 
 
+semi_join(movies, oscars, by = "movie")
 ```
 
 
@@ -412,6 +413,9 @@ Hint: read the help file for `left_join()` or `right_join()`.
 ```{r}
 ## Provide your code here
 
+left_join(oscars, movies, by = "movie")
+## or 
+right_join(movies, oscars, by = "movie")
 ```
 
 Why are there NAs? 
@@ -426,6 +430,9 @@ set and all columns in both the `oscars` and `movies` columns.
 ```{r}
 ## Provide your code here
 
+right_join(oscars, movies, by = "movie")
+## or 
+left_join(movies, oscars, by = "movie")
 ```
 
 
@@ -450,6 +457,7 @@ Hint: Read the help file for `anti_join()`.
 ```{r}
 ## Provide your code here
 
+anti_join(oscars, movies, by = "movie")
 ```
 
 
