@@ -15,14 +15,14 @@ fixheight <- function(x){
 
 suppressMessages(library(dplyr))
 suppressMessages(library(readr))
-url <- "https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv"
 dat <- read_csv(url)
 names(dat) <- c("time","gender","height")
 dat <- mutate(dat,height=gsub("ft","'",height) ) %>%  mutate(height= gsub("\"|inches|\ ","",height) ) %>% mutate(height=fixheight(height)) 
 ```
 
 
-Assessment: Read in the data [here]("https://raw.githubusercontent.com/datasciencelabs/2016_data/master/bio260_heights.csv"). Use the `filter` function to determine how many males and females we have.
+Assessment: Read in the data [here]("https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv"). Use the `filter` function to determine how many males and females we have.
 
 Assessment: Use filter and select to obtain a `data.frame` with just male heights. How many NAs do we have when we convert them to numeric?
 
