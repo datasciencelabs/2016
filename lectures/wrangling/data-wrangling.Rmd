@@ -12,7 +12,7 @@ In the real world, data science projects rarely involve data that can be easily 
 Our example dataset provides an example:
 
 ```{r}
-url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv"
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/bio260-heights.csv"
 dat <- read.csv(url)
 ```
 
@@ -100,7 +100,7 @@ When using `dplyr` we recommend reading in data with the functions in the `readr
 
 ```{r}
 library(readr)
-dat <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv")
+dat <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/bio260-heights.csv")
 ```
 
 This object is now a special type of `data.frame` called `tbl_df` that has a nicer printing method. We can now simply evaluate an expression with just the object and see a meaningful summary instead of 

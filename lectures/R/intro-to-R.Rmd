@@ -148,7 +148,7 @@ Value/CSV) or tab delimited (Tab-Separated Value/TSV/TXT) files.
 These plain-text formats are often easier for sharing, as commercial software is not required for viewing or
 working with the data.
 
-We will start with a simple example dataset containing the [heights of students in our class](https://raw.githubusercontent.com/datasciencelabs/data/master/bio260_heights.csv)
+We will start with a simple example dataset containing the [heights of students in our class](https://raw.githubusercontent.com/datasciencelabs/data/master/bio260-heights.csv)
 
 The first step is to find the file containing your data and know its *path*. 
 
