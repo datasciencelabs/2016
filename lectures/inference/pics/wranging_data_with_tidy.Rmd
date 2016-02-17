@@ -1,0 +1,761 @@
+---
+title: Data Wrangling with `tidyr` and `dplyr` 
+author: Stephanie Hicks, Rafael Irizarry
+---
+
+The data analysis process can be thought about in four parts
+
+1. Data cleaning
+2. Data transformation 
+3. Data visualization
+4. Modeling
+
+where we each of these steps need their own tools and software to complete. 
+
+![Bottlenecks in data analysis](http://r4ds.had.co.nz/diagrams/data-science.png)
+
+As we have seen in class, one of the most time-consuming aspects of 
+the data analysis process is "data wrangling". This is also known 
+as "data munging", which is a trendy term for 
+_cleaning up a messy data set_. This refers to the first two steps in the 
+data analysis process: 
+
+1. Data cleaning (or tidying data)
+2. Data transformation 
+
+
+It can take a long time to clean and transform messy data into a format 
+that is useful for data visualization and modeling, but there are tools 
+that can help turn messy data into clean data. 
+
+We have learned some functions in the R package `dplyr` that can 
+transform and summarize tabular data with rows and columns. Today we will 
+learn about: 
+
+* advanced dplyr functionality to help with the "data transformation" step  
+* how to get a clean data set or how to "tidy" a data set
+
+### Defining data structures 
+
+There are many ways to define the structure of a data set. 
+Most data frames are made up of **rows** and **columns** where the columns 
+are almost always labeled and the rows are *sometimes* labeled. 
+
+For example, a data set could be structured in the following way: 
+
+* each row represents one company (row names are companies)
+* each column represent one time point
+* the stock prices are defined for each row/column pair
+
+```{r}
+set.seed(123)
+stocks <- rbind("Google" = rnorm(5, 100, 1), "Facebook" = rnorm(5, 100, 2), 
+  "Twitter" = rnorm(5, 100, 4))
+colnames(stocks) <- as.character(as.Date('2016-01-01') + 0:4)
+stocks
+```
+
+Alternatively, a data set can be structured in the following way:
+
+* each row represents one time point (but no row names)
+* the first column defines the time variable and the last three columns contain the stock prices for three companies 
+
+```{r}
+set.seed(123)
+stocks <- data.frame( time = as.Date('2016-01-01') + 0:4,
+  "Google" = rnorm(5, 100, 1), "Facebook" = rnorm(5, 100, 2), 
+  "Twitter" = rnorm(5, 100, 4))
+stocks
+```
+
+In both cases, the data is the same, but the structure is different. This 
+can be  _frustrating_ to deal with because the meaning of the 
+values (rows and columns) in the two data sets are different. Providing a 
+standardized way of organizing values within a data set would alleviate 
+a major portion of this frustration.  
+
+
+### Defining tidy data
+
+Now, we will introduce the concept of **tidy** data. Tidy data is a 
+standard way of mapping the meaning of a dataset to its structure.
+The properties of a tidy data set are based on: 
+
+* Each column is a variable
+* Each rows is an observation
+
+Working with tidy data is useful because it creates a structured way of
+organizing data values within a data set. This makes the data analysis 
+process more efficient and simplifies the development of data analysis tools
+that work together. In this way, you can focus on the problem you are
+investigating, rather than the uninteresting logistics of data.  
+
+
+### What is `tidyr`?
+
+[`tidyr`](https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html)
+is an R package that transforms data sets to a tidy format. 
+
+There are two main functions in `tidyr`: 
+
+* `gather()` = takes multiple columns, and gathers them into key-value pairs  
+(it makes "wide" data longer)
+* `separate()` = turns a single character column into multiple columns
+(it makes "long" data wider)
+
+We'll explore what it means to go between a "wide" and "long" 
+data format using `gather()` and `separate()` next. 
+
+
+### How do I get tidyr? 
+
+To install `tidyr`
+
+```{r, eval=FALSE}
+install.packages("tidyr")
+```
+
+To load `tidyr`
+
+```{r, message=FALSE}
+library(tidyr)
+```
+
+For motivation, a tidy version of the stock data we looked at above
+looks like this: (we'll learn how the functions work in just a moment)
+
+```{r, message=FALSE}
+library(dplyr)
+stocks %>% 
+    gather(company, price, Google:Twitter)
+```
+
+In this "tidy" data set, we have three columns representing three variables 
+(time, company name and stock price). Every row represents contains one
+stock price from a particular time and for a specific company. 
+
+### Pipe operator: %>%
+
+We have introduced the operator: `%>%`. 
+dplyr imports this operator from another package (`magrittr` [see help file here](http://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html)). 
+This operator allows you to pipe the output from one function to 
+the input of another function. Instead of nesting functions (reading 
+from the inside to the outside), the idea of of piping is to read the 
+functions from left to right. 
+
+Now in this case, we pipe the `stocks` data frame to the function that will 
+gather multiple columns into key-value pairs. 
+
+
+# Data 
+
+## 2016 Iowa Presidential Caucus 
+
+We will explore [public poll data from HuffPost Pollster](http://elections.huffingtonpost.com/pollster) 
+from the 2016 Iowa [Democratic](http://elections.huffingtonpost.com/pollster/2016-iowa-presidential-democratic-caucus) and [Republican](http://elections.huffingtonpost.com/pollster/2016-iowa-presidential-republican-caucus) 
+Presidential Caucus.
+
+First we will read in the data:
+```{r}
+library(readr)
+dem_polls = read_csv("http://elections.huffingtonpost.com/pollster/2016-iowa-presidential-democratic-caucus.csv")
+rep_polls = read_csv("http://elections.huffingtonpost.com/pollster/2016-iowa-presidential-republican-caucus.csv")
+```
+
+Let's take a look at data
+```{r, eval=FALSE}
+View(dem_polls)
+View(rep_polls)
+
+glimpse(dem_polls)
+glimpse(rep_polls)
+```
+
+We see there is a lot of information in each data frame.  First let's use 
+`dplyr` to select a subset of the columns.  
+```{r}
+dem_polls <- dem_polls %>% 
+                select(Pollster, `End Date`, Clinton:Undecided)
+
+rep_polls <- rep_polls %>% 
+                select(Pollster, `End Date`, Trump:Walker)
+```
+
+In the democratic and republican polling data sets, there is one column 
+representing the polling percentages for each candidate, 
+similar to the stock price data set with multiple columns 
+representing different companies.  To **tidy** it, we need to *gather* these 
+columns into a two-column *key-value* pair.  This is often described as 
+transforming a _wide_ data set into a _long_ data set.  
+
+
+
+
+# gather()
+
+This function gathers multiple columns and collapses them into new 
+*key-value* pairs. This transform data from _wide_ format into 
+a _long_ format. 
+
+* The `key` is the name of the _new_ column that you are creating which 
+contains the values of the column headings that you are gathering 
+* The `value` is the name of the _new_ column that will contain the values
+themselves
+* The third argument defines the columns to gather
+
+```{r}
+dem_polls %>% 
+    gather(key = candidate, value = percentage, Clinton:Undecided)
+```
+
+To select a range of columns by name, use the ":" (colon) operator
+
+#### Assessment 
+Using the democratic poll data, apply the `gather()` function 
+to tidy the poll data by _excluding_ the Pollster and End Date columns, 
+rather than directly providing the column names to gather.  
+
+Hint: Look at the `gather()` help file on how to exclude column names.
+
+```{r}
+## Provide your code here
+
+dem_polls %>% 
+    gather(key = candidate, value = percentage, -c(Pollster, `End Date`))
+
+## To select all the columns *except* a specific column, 
+## use the "-" (subtraction) operator (also known as negative indexing)
+```
+
+
+#### Assessment
+Using the "tidy" democratic poll data, use dplyr to filter for only 
+the following candidates (Clinton, Sanders, O'Malley) and for polls 
+only ending after May 1, 2015. 
+
+```{r}
+## Provide your code here
+
+dem_polls %>% 
+    gather(key = candidate, value = percentage, Clinton:Undecided) %>%
+    filter(candidate %in% c("Clinton", "Sanders", "O'Malley") & 
+           `End Date` >= "2015-05-01")
+```
+
+#### Assessment (optional)
+Using the tidy and filtered democratic poll data set, 
+use `ggplot2` to plot the results from each poll (percentage) for each
+of the candiates. Color the color the points by the candidate. 
+
+Try reading the help file for `geom_smooth()` to overlay a smoothed 
+line across the points. Don't worry if you don't know what it means.
+We'll get to it later in the course. 
+
+```{r}
+## Provide your code here
+
+library(ggplot2)
+
+dem_polls %>% 
+    gather(key = candidate, value = percentage, Clinton:Undecided) %>%
+    filter(candidate %in% c("Clinton", "Sanders", "O'Malley") & 
+           `End Date` >= "2015-05-01") %>% 
+    ggplot(aes(x=`End Date`, y = percentage, color = candidate)) + 
+    geom_point() + geom_smooth()
+```
+
+
+#### Assessment (optional) 
+Repeat this analysis using the republican poll data. 
+Filter for candidates (Trump, Cruz, Rubio, Carson, Bush, Paul, Fiorina) 
+and for polls only after May 1, 2015. Color the points by candidates. 
+
+```{r}
+## Provide your code here
+
+rep_polls %>% 
+    gather(key = candidate, value = percentage, Trump:Walker) %>%
+    filter(candidate %in% c("Trump", "Cruz", "Rubio", "Carson", 
+                            "Bush", "Paul", "Fiorina") & 
+           `End Date` >= "2015-05-01") %>% 
+    ggplot(aes(x=`End Date`, y = percentage, color = candidate)) + 
+    geom_point() + stat_smooth()
+```
+
+
+
+
+# spread()
+
+In contrast to *gathering* multiple columns into key-value pairs, we can 
+*spread* a key-value pair across multiple columns.  
+
+The function `spread()` does just that. It transforms data from a _long_
+format into a _wide_ format. 
+
+* The `key` is the name of the column in your data set that 
+contains the values of the column headings that you are spreading across 
+multiple columns
+* The `value` is the name of the column that contains the values for the 
+multiple columns
+
+
+```{r}
+dem_polls_gathered <- dem_polls %>% 
+                         gather(key = candidate, value = percentage, 
+                                Clinton:Undecided)
+dem_polls_gathered
+
+dem_polls_gathered %>% 
+    spread(key = candidate, value = percentage)
+```
+
+
+## Other supporting functions in tidyr
+
+* `separate()` = separate one column into multiple columns
+* `unite()` = unite multiple columns into one
+
+```{r}
+dem_polls_separate <- dem_polls %>% 
+                        separate(col = `End Date`, into = c("y", "m", "d"))
+dem_polls_separate
+```
+
+#### Assessment
+
+Use the `unite()` function to create a new column titled "end_date" that 
+combines the columns `y`, `m` and `d` together into a single column separated 
+by the "/" character. 
+
+```{r}
+## Provide your code here
+
+dem_polls_separate %>% 
+    unite(col = end_date, y, m, d, sep = "/")
+```
+
+
+# Advanced dplyr
+
+We have now learned how to obtain a clean (or _tidy_) data set. The next step 
+in the the data analysis process is to transform and summarize data. When 
+data is a tabular format, you have seen how we can use `dplyr` to `filter()` 
+rows, `select()` columns and add new columns using `mutate()`. Now we will 
+explore some more advanced dplyr functionality.  
+
+### Brief recap of dplyr
+
+[`dplyr`](http://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html) 
+is a powerful R-package to transform and summarize tabular data with rows 
+and columns. 
+
+The package contains a set of functions (or "verbs") to perform common data 
+manipulation operations such as filtering for rows, selecting specific 
+columns, re-ordering rows, adding new columns and summarizing data. 
+In addition, `dplyr` contains a useful function to perform another common task 
+which is the is the "split-apply-combine" concept.  We will discuss that in a
+little bit. 
+
+# Data
+
+## mammals sleep
+
+The `msleep` (mammals sleep) data set contains the sleeptimes and weights for 
+a set of mammals and is available in the [`data` repository on GitHub](https://raw.githubusercontent.com/datasciencelabs/data/master/msleep_ggplot2.csv). 
+This data set contains 83 rows and 11 variables.  
+
+To load the `msleep` data set
+
+```{r}
+msleep <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/msleep_ggplot2.csv")
+msleep
+```
+
+The columns (in order) correspond to the following: 
+
+column name | Description
+--- | ---
+`name` | common name
+`genus` | taxonomic rank
+`vore` | carnivore, omnivore or herbivore?
+`order` | taxonomic rank
+`conservation` | the conservation status of the mammal
+`sleep_total` | total amount of sleep, in hours
+`sleep_rem` | rem sleep, in hours
+`sleep_cycle` | length of sleep cycle, in hours
+`awake` | amount of time spent awake, in hours
+`brainwt` | brain weight in kilograms
+`bodywt` | body weight in kilograms
+
+
+# Important `dplyr` verbs to remember
+
+`dplyr` verbs | Description
+--- | ---
+`select()` | select columns 
+`mutate()` | create new columns
+`filter()` | filter rows
+`arrange()` | re-order or arrange rows
+`summarise()` | summarise values
+`group_by()` | allows for group operations in the "split-apply-combine" concept
+
+
+
+# `dplyr` verbs in action
+
+### `select()` and `mutate`() columns; `filter()` rows
+
+The two most basic functions are `select()` and `filter()` which selects 
+columns and filters rows, respectively. The function `mutate()` can be used 
+to create new columns. We have already seen examples of all of these
+in class. 
+
+For example, to select a range of columns by name, use the ":" (colon) operator
+
+```{r}
+msleep %>% select(name:order)
+```
+
+To select all columns that start with the character string "sl", use the 
+function `starts_with()`
+
+```{r}
+msleep %>% select(starts_with("sl"))
+```
+
+Some additional options to select columns based on a specific criteria include
+
+1. `ends_with()` = Select columns that end with a character string
+2. `contains()` = Select columns that contain a character string
+3. `matches()` = Select columns that match a regular expression
+4. `one_of()` = Select columns names that are from a group of names
+
+
+#### Assessment
+
+Select all columns except those from `genus` to `conservation` and 
+filter the rows for mammals that sleep a total of more than 16 hours
+and have a body weight of greater than 1 kilogram
+
+```{r}
+## Provide your code here
+
+msleep %>% 
+    select(-(genus:conservation)) %>% 
+    filter(sleep_total >= 16, bodywt >= 1)
+```
+
+#### Assessment (optional)
+
+Select all columns that start with the character string "sl" or ends
+with the character string "wt", create a new
+column called `rem_proportion` which is the ratio of rem sleep 
+to total amount of sleep, create a second column `bodywt_grams` which
+is the bodywt column in grams and filter for the rows 20 to 30 in 
+the msleep data set by numerical position. 
+
+Hint: Look at the `slice()` help file to filter for rows by numerical 
+position. 
+
+```{r}
+## Provide your code here
+
+msleep %>% 
+    select(starts_with("sl"), ends_with("wt")) %>%
+    mutate(rem_proportion = sleep_rem / sleep_total, 
+           bodywt_grams = bodywt * 1000) %>%
+    slice(20:30)
+```
+
+
+### Arrange or re-order rows using `arrange()`
+
+To arrange (or re-order) rows by a particular column such as the taxonomic
+order, list the name of the column you want to arrange the rows by
+
+```{r}
+msleep %>% 
+    arrange(order)
+```
+
+
+#### Assessment
+
+Select all columns names with the characters "sleep" and arrange the rows 
+for the `sleep_rem` in a decreasing order.
+
+Hint: look at the `?arrange` help file for the `desc()` option.
+
+```{r}
+## Provide your code here
+
+msleep %>% 
+    select(matches("sleep")) %>% 
+    arrange(desc(sleep_rem))
+
+```
+
+#### Assessment
+
+Select three columns from `msleep` (`name`, `order`, `sleep_total`), 
+arrange the rows in the `sleep_total` column in a descending order, and 
+filter the rows for mammals that sleep for a total of 16 or more hours. 
+
+```{r}
+msleep %>% 
+    select(name, order, sleep_total) %>%
+    arrange(order, desc(sleep_total)) %>% 
+    filter(sleep_total >= 16)
+```
+
+
+
+### Create summaries of the data frame using `summarise()`
+
+The `summarise()` function will create summary statistics for a given column 
+in the data frame such as finding the mean. For example, to compute the 
+average number of hours of sleep, apply the `mean()` function to the 
+column `sleep_total` and call the summary value `avg_sleep`. 
+
+```{r}
+msleep %>% 
+    summarise(avg_sleep = mean(sleep_total))
+```
+
+There are many other summary statistics you could consider such `sd()`, 
+`min()`, `max()`, `median()`, `sum()`, `n()` (returns the length of vector), 
+`first()` (returns first value in vector), `last()` (returns last value in 
+vector) and `n_distinct()` (number of distinct values in vector). 
+
+
+#### Assessment
+
+Summarize `sleep_total` column in the `msleep` data set with the 
+average sleep, the minimum and maximum amount of sleep, and the 
+total number of mammals. 
+
+```{r}
+## Provide your code here
+
+msleep %>% 
+    summarise(avg_sleep = mean(sleep_total), 
+              min_sleep = min(sleep_total),
+              max_sleep = max(sleep_total),
+              total = n())
+```
+
+    
+### Group operations using `group_by()`
+
+The `group_by()` verb is an important function in `dplyr`. As we mentioned 
+before it's related to concept of "split-apply-combine". We literally want to 
+split the data frame by some variable (e.g. `vore`), apply a 
+function to the individual data frames and then combine the output. 
+
+Say we wanted to calculate the standard deviation of the body 
+and brain weights for each of factor in the `vore` column.  First, we can 
+look at the types of factors in the `vore` column
+```{r}
+table(msleep$vore)
+```
+
+Then, we could use `filter()` to filter for rows that contain "carni" in the 
+`vore` column and summarize with the mean of the brain and body
+weights. 
+```{r}
+msleep %>% 
+    filter(vore == "carni") %>% 
+    summarize("bodywt_sd" = mean(bodywt), 
+              "brainwt_sd" = mean(brainwt, na.rm = TRUE))
+```
+
+We could repeat this for each factor in `vore`, which is a bit teadious.
+Instead, we could use this using the `group_by()` function. 
+
+Let's do that: split the `msleep` data frame by the `vore` column, 
+then calculate the mean of body weight and brain weight 
+for each invididual data frame. (hint: We expect a set of summary 
+statistics for each level in `vore`.)
+
+```{r}
+msleep %>% 
+    group_by(vore) %>%
+    summarize("bodywt_sd" = mean(bodywt), 
+              "brainwt_sd" = mean(brainwt, na.rm = TRUE))
+```
+
+
+#### Assessment
+
+Split the `msleep` data frame by the taxonomic order, then for each 
+taxonomic order summarize the `sleep_total` with the average sleep, 
+the minimum and maximum amount of sleep, and the total number of mammals
+in each order. 
+
+```{r}
+## Provide your code here
+
+msleep %>% 
+    group_by(order) %>%
+    summarise(avg_sleep = mean(sleep_total), 
+              min_sleep = min(sleep_total), 
+              max_sleep = max(sleep_total),
+              total = n())
+```
+
+
+#### Assessment (optional)
+
+Create boxplots of the `sleep_total` column split by `vore`. 
+```{r}
+dat <- msleep %>% 
+            filter(!is.na(vore))
+ggplot(dat, aes(x=vore, y=sleep_total, fill = vore)) + 
+    geom_boxplot() + ylab("Sleep Total (hrs)") + 
+    labs(title = "Sleep total (split by vore)")
+```
+
+# joining two data frames in `dplyr`
+
+The last part of `dplyr` that we will discuss are a set of `dplyr` 
+verbs that allow you to join two data sets.
+
+`dplyr` verbs to join two tables (`x`, `y`) | Description
+--- | ---
+`inner_join(x, y)` | join data (retain only rows in both sets)
+`left_join(x, y)` | join matching rows from `y` to `x`
+`right_join(x, y)` | join matching rows from `x` to `y`
+`full_join(x, y)` | join data (retain all values, all rows)
+`semi_join(x, y)` | all rows in `x` that match in `y`
+`anti_join(x, y)` | all rows in `x` that do have a match in `y`
+
+
+## Data
+
+For this section, we will work with two small data sets related to the 
+2016 Oscars Nominations. The two data sets are `oscars` and `movies`.  The 
+first data set contains information about the the name of the actor/actress,
+the name of the movie and the category for nomination.  The second 
+data set contains a list of movies and the length of the movie in minutes. 
+
+We will explore the `dplyr` verbs to join the two tables.  First let's load
+the data. 
+
+```{r}
+library(readr)
+
+oscars <-"
+name,movie,category
+Adam McKay,The Big Short,Best Director
+Alejandro González Iñárritu,The Revenant,Best Director
+Lenny Abrahamson,Room,Best Director
+Tom McCarthy,Spotlight,Best Director
+George Miller,Mad Max: Fury Road,Best Director
+Bryan Cranston,Trumbo,Best Actor
+Matt Damon,The Martian,Best Actor
+Michael Fassbender,Steve Jobs,Best Actor
+Leonardo DiCaprio,The Revenant,Best Actor
+Eddie Redmayne,The Danish Girl,Best Actor
+Cate Blanchett,Carol,Best Actress
+Brie Larson,Room,Best Actress
+Jennifer Lawrence,Joy,Best Actress
+Charlotte Rampling,45 Years,Best Actress
+Saoirse Ronan,Brooklyn,Best Actress
+"
+oscars <- read_csv(oscars, trim_ws = TRUE, skip = 1)
+oscars 
+
+movies <-"
+movie,length_mins
+The Big Short,130
+Star Wars: The Force Awakens,135
+Brooklyn,111
+Mad Max: Fury Road,120
+Room,118
+The Martian,144
+The Revenant,156
+Spotlight,128
+"
+movies <- read_csv(movies, trim_ws = TRUE, skip = 1)
+movies 
+```
+
+### inner_join()
+
+> inner_join(x, y): Return all rows from x where there are matching 
+values in y, and all columns from x and y. If there are multiple matches
+between x and y, all combination of the matches are returned.
+
+```{r}
+inner_join(oscars, movies, by = "movie")
+inner_join(movies, oscars, by = "movie")
+```
+
+### semi_join()
+
+> semi_join(x, y): Return all rows from x where there are matching values 
+in y, keeping just columns from x. A semi join differs from an 
+inner join because an inner join will return one row of x for 
+each matching row of y, where a semi join will never duplicate 
+rows of x.
+
+```{r}
+semi_join(oscars, movies, by = "movie")
+semi_join(movies, oscars, by = "movie")
+```
+
+### left_join()
+
+> left_join(x, y): Return all rows from x, and all columns from x and y. 
+If there are multiple matches between x and y, all combination of the 
+matches are returned. 
+
+```{r}
+left_join(oscars, movies, by = "movie")
+left_join(movies, oscars, by = "movie")
+```
+
+
+### right_join()
+
+> right_join(x, y): Return all rows from y, and all columns from x and y. 
+If there are multiple matches between x and y, all combination of the 
+matches are returned.
+
+```{r}
+right_join(oscars, movies, by = "movie")
+right_join(movies, oscars, by = "movie")
+```
+
+
+### full_join()
+
+> full_join(x, y): Return all rows and all columns from both x and y. 
+Where there are not matching values, returns NA for the one missing.
+
+```{r}
+full_join(oscars, movies, by = "movie")
+full_join(movies, oscars, by = "movie")
+```
+
+### anti_join()
+
+> anti_join(x, y): Return all rows from x where there are not matching 
+values in y, keeping just columns from x.
+
+```{r}
+anti_join(oscars, movies, by = "movie")
+anti_join(movies, oscars, by = "movie")
+```
+
+
+
+
+
+# Cheatsheets
+
+* [Data Wrangling with dplyr and tidyr from RStudio](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+
+
+
