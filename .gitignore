@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 .DS_Store
 homework/.DS_Store
+=======
+# ignore Rstudio project files
+
+*.Rproj
+>>>>>>> course/master
 
