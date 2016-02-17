@@ -10,7 +10,7 @@ We are going to have a competition. There is a prize.
 You have to guess the proportion of blue beads in this jar. 
 
 
-![](pics/IMG_6967.JPG)
+![](pics/jar-of-beads.jpg)
 
 You can take a sample (with replacement)
 from the jar here:
