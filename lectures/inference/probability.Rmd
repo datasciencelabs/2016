@@ -210,7 +210,8 @@ library(gtools)
 index <- permutations(52,2)
 first_card <- deck[index[,1]]
 second_card <- deck[index[,2]]
-sum(second_card == "Three Hearts") / sum( second_card != "Three Hearts" )
+sum(second_card == "Three Hearts") / 
+  sum( first_card != "Three Hearts" )
 ```
 
 which is $1/51$. 
