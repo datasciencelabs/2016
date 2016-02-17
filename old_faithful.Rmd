@@ -1,0 +1,57 @@
+---
+title: Old Faithful Geyser
+---
+
+The [Old Faithful Geyser](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/faithful.html) 
+data set is a well-known data set that depicts the relationship 
+of the waiting time between eruptions and the duration of the 
+eruption for the Old Faithful geyser in Yellowstone National 
+Park, Wyoming, USA [[webcam]](http://yellowstone.net/webcams/). 
+
+`faithful` is a data set with 272 observations on 2 variables.
+
+Column name| Description 
+--- | --- 
+eruptions | Duration time of previous eruption time (in mins)
+waiting	| Waiting time to next eruption (in mins)
+
+Let's load the `faithful` dataset. 
+```{r}
+data(faithful)
+head(faithful)
+summary(faithful)
+```
+
+
+This is a histogram of the time between eruptions. We see the are two 
+groups of waiting times to the next eruption: One group with mean around 
+55 minutes and a second group with a mean around 80 minutes. 
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr) 
+
+faithful %>% 
+    ggplot(aes(x = waiting)) + geom_histogram(binwidth = 2) + 
+    xlab("Waiting time to next eruption (in mins)") + 
+    ylab("Frequency") + 
+    labs(title="Old Faithful Geyser time between eruption")
+```
+
+This histogram indicates [Old Faithful isn't as "faithful" as you might think](http://people.stern.nyu.edu/jsimonof/classes/2301/pdf/geystime.pdf). 
+
+
+Let's look at the relationship between the duration of the previous 
+eruption and how it related to the waiting time until the next eruption.  
+
+```{r}
+faithful %>% 
+    ggplot(aes(x = eruptions, y = waiting)) + geom_point() + 
+    xlab("Duration of previous eruption time (in mins)") + 
+    ylab("Waiting time to next eruption (in mins)") + 
+    labs(title="Old Faithful Geyser")
+```
+
+We see that the relationship between these two variables is fairly linear, 
+which suggests that we might use a linear model to predict the waiting 
+time until the next eruption based on the duration of the previous eruption. 
