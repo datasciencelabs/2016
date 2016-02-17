@@ -606,7 +606,7 @@ which we shall call `course`. To add the remote URL, use `git remote add course 
 **These last two steps will be repeated throughout the semester.**
 
 6. As course material is added to [https://github.com/datasciencelabs/2016](https://github.com/datasciencelabs/2016)
-over the semster, use `git fetch course` and `git merge course/origin` 
+over the semster, use `git fetch course` and `git merge course/master` 
 to pull in the changes into your local repository on your computer.
 7. If you decide to make changes to your local repository, use the basic `git` 
 routine (`git add`, `git commit`, `git push`). **Note**: `git push` will 
