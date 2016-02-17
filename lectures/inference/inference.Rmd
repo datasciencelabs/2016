@@ -7,7 +7,12 @@ output: html_document
 
 We are going to have a competition. There is a prize.
 
-You have to guess the proportion of blue beads in the jar. You can take a sample (with replacement)
+You have to guess the proportion of blue beads in this jar. 
+
+
+![](pics/IMG_6967.JPG)
+
+You can take a sample (with replacement)
 from the jar here:
 
 [https://dgrtwo.shinyapps.io/urn_drawing/](https://dgrtwo.shinyapps.io/urn_drawing/)
