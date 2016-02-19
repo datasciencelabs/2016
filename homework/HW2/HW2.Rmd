@@ -3,7 +3,7 @@ title: "Homework 2: The Big Short"
 output: html_document
 ---
  
-**This homework is due Sunday February 26, 2016 at 5:00 PM. When complete, submit your code in the R Markdown file and the knitted HTML via GitHub.**
+**This homework is due Friday February 26, 2016 at 5:00 PM. When complete, submit your code in the R Markdown file and the knitted HTML via GitHub.**
 
 # Background 
 
