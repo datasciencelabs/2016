@@ -7,12 +7,12 @@ output: html_document
 
 # Background 
 
-This homework is motivated by circumstances surrounding the [financial crisis of 2007-2008](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308). We title the homework _The Big Short_ because this is the title of a recent book about this topic that was recently made into a movie.
+This homework is motivated by circumstances surrounding the [financial crisis of 2007-2008](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308). We titled the homework _The Big Short_, after the book on the same topic that was also recently made into a movie.
 
 Part of what caused the financial crisis was that the risk of certain [securities](https://en.wikipedia.org/wiki/Security_(finance)) sold by financial institutions were  underestimated. Specifically, 
-the risk of mortgage-backed securities (MBS) and collateralized debt obligations (CDO), whose price dependens on homeowners making their monthly payments, were grossly underestimated. A combination of factors resulted in many more defaults than were expected. This resulted in a crash of the prices of these securities. As a consequence, banks lost so much money that they needed bailouts to avoid default.
+the risk of mortgage-backed securities (MBS) and collateralized debt obligations (CDO), the price of which depends on homeowners making their monthly payments, was grossly underestimated. A combination of factors resulted in many more defaults than were expected. This resulted in a crash of the prices of these securities. As a consequence, banks lost so much money that they needed bailouts to avoid default.
 
-Here we present a **very** simplified version of what happened with some of these securities. Hopefully it will help you understand how a wrong assumption about statistical behavior of events can lead to substantial differences between what the model predicts and what actually happens. Specifically, we will see how using an independence assumption can result in misleading conclusions. Before we start with the specific application we ask you about a simple casino game.
+Here we present a **very** simplified version of what happened with some of these securities. Hopefully it will help you understand how a wrong assumption about the statistical behavior of events can lead to substantial differences between what the model predicts and what actually happens. Specifically, we will see how using an independence assumption can result in misleading conclusions. Before we start with the specific application we ask you about a simple casino game.
 
 # Problem 1
 
@@ -31,7 +31,7 @@ Let's make a quick sampling model for this simple version of roulette. You are g
 
 ## Problem 1B
 
-Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for $N=10,25,100,1000$. That is, study the distribution of earnings for different number of plays. What are the distributions of these two random variables? How does the expected values and standard errors change with $N$. Then do the same thing for the average winnings $S_N/N$. What result that you learned in class predicts this?
+Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for $N=10,25,100,1000$. That is, study the distribution of earnings for different number of plays. What are the distributions of these two random variables? How do the expected values and standard errors change with $N$? Then do the same thing for the average winnings $S_N/N$. What result that you learned in class predicts this?
 
 ```{r}
 ##Your code here
@@ -48,9 +48,8 @@ Your answer here.
 
 ## Problem 1D
 
-If you play 25 times. Use CLT to approximate the probability that the casino looses money. Then use a Monte Carlo simulation to corroborate.
+Use CLT to approximate the probability that the casino loses money when you play 25 times. Then use a Monte Carlo simulation to confirm.
 
-Your answer here. 
 ```{r}
 ##Your code here
 ```
@@ -65,11 +64,11 @@ In general, what is the probability that the casino loses money as a function of
 ##Your code here
 ```
 
+Your answer here. 
 
 # Problem 2 
 
-You run a bank that has a history of identifying 
-potential homeowners that can be trusted to make payments. In fact, historically, in a given year, only 2% of your customers default. You want to use stochastic models to get an idea of what interest rates you should charge to guarantee a profit this upcoming year. 
+You run a bank that has a history of identifying potential homeowners that can be trusted to make payments. In fact, historically, in a given year, only 2% of your customers default. You want to use stochastic models to get an idea of what interest rates you should charge to guarantee a profit this upcoming year. 
 
 ## Problem 2A
 
@@ -109,7 +108,7 @@ In problem 2C, you were able to set a very low interest rate. Your customers wil
 
 Note that the probability of losing money is quite high. To what value would you have to raise interest rates in order to make the probability of losing money, and your bank and your job, as low as 0.001? What is the expected profit with this interest rate? Corroborate your answer with a Monte Carlo simulation.
 
-Hint: Use the following short cut. If $p$ fraction of a box are $a$s and $(1-p)$ are $b$s then , then the SD of the list if $\mid a-b \mid \sqrt{p(1-p)}$ 
+Hint: Use the following short cut. If $p$ fraction of a box are $a$s and $(1-p)$ are $b$s, then the SD of the list is $\mid a-b \mid \sqrt{p(1-p)}$ 
 
 Your solution here.
 
@@ -119,8 +118,8 @@ Your solution here.
 
 ## Problem 2F
 
-Note that the Monte Carlo simulation gave a slightly higher probability that 0.001. What is a possible reason for this? 
-Hint: See if the disparity is smaller for larger values of $p$. Also check for probabilities larger than 0.001. Recall we made an assumptions when we calculated the interest rate.
+Note that the Monte Carlo simulation gave a slightly higher probability than 0.001. What is a possible reason for this? 
+Hint: See if the disparity is smaller for larger values of $p$. Also check for probabilities larger than 0.001. Recall we made an assumption when we calculated the interest rate.
 
 
 ```{r}
@@ -132,7 +131,7 @@ Your answer here.
 
 ## Problem 3
 
-We were able to set interest rate of about 2% that guaranteed a very low probability of having a loss. Furthermore, the expected average was over $1 million. Now other financial companies noticed the success of our business. They also noted that if we increase the number loans we give, our profits increase. However, the pool of reliable borrowers was limited. So these other companies decided to give loans to less reliable borrowers but at a higher rate.
+We were able to set an interest rate of about 2% that guaranteed a very low probability of having a loss. Furthermore, the expected average was over $1 million. Now other financial companies noticed the success of our business. They also noted that if we increase the number of loans we give, our profits increase. However, the pool of reliable borrowers was limited. So these other companies decided to give loans to less reliable borrowers but at a higher rate.
 
 ## Problem 3A
 
@@ -152,14 +151,14 @@ At the interest rate calculated in 3A what is the probability of negative profit
 
 ## Problem 3C 
 
-Note that the probability is much higher now. This is because the  standard deviation grew. The companies giving out the loans did not want to raise interest rates much more since it would drive away clients. Instead they used a statistical approach. They increased $N$. How large does $N$ need to be for this probability to be 0.001? Use the central limit approximation and then confirm with a Monte Carlo simulation.
+Note that the probability is much higher now. This is because the standard deviation grew. The companies giving out the loans did not want to raise interest rates much more since it would drive away clients. Instead they used a statistical approach. They increased $N$. How large does $N$ need to be for this probability to be 0.001? Use the central limit approximation and then confirm with a Monte Carlo simulation.
 
 Your answer here.
 ```{r}
 ###your code here
 ```
 
-So by doubling the number of loans we were able to reduce our risk! Now, for this to work, all the assumptions in our model need to be approximately correct, including the assumption that the probability of default was **independent**. This turned out to be false and the main reason for the under estimate of risk.
+So by doubling the number of loans we were able to reduce our risk! Now, for this to work, all the assumptions in our model need to be approximately correct, including the assumption that the probability of default was **independent**. This turned out to be false and the main reason for the under estimation of risk.
 
 
 ## Problem 3D
@@ -184,7 +183,7 @@ sum( outcomes1[1,] < 0 & outcomes1[2,]<0)/sum(outcomes1[1,]<0)
 
 This quantity is about the same as the probability of default $0.05$.
 
-Now we create a new model. Before generating each set of defaults, we assume that an random event occurred that makes all default probabilities go up or go down by 4 points. We could see how this would happen if, for example, demand for houses decreases and all house prices drop. 
+Now we create a new model. Before generating each set of defaults, we assume that a random event occurred that makes all default probabilities go up or go down by 4 points. We could see how this would happen if, for example, demand for houses decreases and all house prices drop. 
 
 ```{r}
 B <- 10^5
@@ -212,4 +211,4 @@ Generate a simulation with correlated outcomes such as those above. This time us
 
 ## Problem 4
 
-Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework help explain the conditions that led to the crisis.
+Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework can help explain the conditions that led to the crisis.
