@@ -201,7 +201,9 @@ sum( outcomes2[1,] < 0 & outcomes2[2,]<0)/sum(outcomes2[1,]<0)
 ```
 
 
-Generate a simulation with correlated outcomes such as those above. This time use the interest rate calculated in 3A. What is the expected earnings under this model compared to the previous?
+Generate a simulation with correlated outcomes such as those above. This time use the interest rate calculated in 3A. What is the expected earnings under this model compared to the previous? What is the probability of losing $1 million compared to the previous? What is the probability of losing $10 million compared to the previous?
+
+
 
 ```{r}
 ###your code here
