@@ -144,7 +144,7 @@ $$\mu = \frac{1}{n}\sum_{i=1}^n x_i$$
 
 We can see that the average of values inside a jar with 0s and 1s is the number of 1s divided by $n$. This is the proportion of 1s. In general if a jar has two values $a$ and $b$ with proportions $p$ and $(1-p)$ respectively, the average is $ap + b(1-p)$.
 
-Assessment: What are the averages for the roulette examples? 
+Assessment: What are the averages for the roulette examples? [http://goo.gl/forms/XNIW22JSsc](http://goo.gl/forms/XNIW22JSsc)
 - Betting on black 
 - Betting on 7
 
@@ -160,7 +160,7 @@ $$ \sigma = \sqrt{ \frac{1}{n} \sum_i^n (x_i - \mu)^2} $$
 
 we can derive, with a bit of math, that if a jar has two values $a$ and $b$ with proportions $p$ and $(1-p)$ respectively, the standard deviation is $\mid b - a \mid \sqrt{p(1-p)}$.
 
-Assessment: What are the expected value and standard errors of the number of democrats. Hint: The answers are functions of $p$, the proportion of democrats. 
+Assessment: What are the expected value and standard errors of the number of democrats. Hint: The answers are functions of $p$, the proportion of democrats. [http://goo.gl/forms/70Um4fp5Pn](http://goo.gl/forms/70Um4fp5Pn)
 
 Let $S$ be the number of democrats in our sample, or the sum of the 25 draws. Our expected value is 
 
@@ -203,14 +203,14 @@ cat("Our estimate of the percent of decomrats is",p_hat,
 
 Which is not terribly useful. However, now we know that we can be more precise by taking a larger poll.
 
-Assessment: If $p=0.5$, how large should the poll be to have a standard error of 2% or less ? Then take a poll and report expected value and standard error
+Assessment: If $p=0.5$, how large should the poll be to have a standard error of 2% or less ? Then take a poll and report expected value and standard error [http://goo.gl/forms/R9Ke1UfHBB](http://goo.gl/forms/R9Ke1UfHBB)
 
 
 ## Probability Distribution for Random Variables
 
 The plus or minus statements above are not very precise. Is it possible to say more? Can we, for example, compute the probability that $\hat{p}$ is within 1% of the actual $p$ ? It turns out that we can. First let's start with a Monte Carlo simulation. 
 
-Assessment: Repeat the exercise of taking a poll of 625 likely voters, 10,000 times. Without peaking at $p$ study the distribution of $\hat{p}-p$. Have we seen this distribution before? How often was our error smaller larger than 0.02? 
+Assessment: Repeat the exercise of taking a poll of 625 likely voters, 10,000 times. Without peaking at $p$ study the distribution of $\hat{p}-p$. Have we seen this distribution before? How often was our error smaller larger than 0.02? [http://goo.gl/forms/JqyeuvvJiR](http://goo.gl/forms/JqyeuvvJiR)
 
 The distribution we see here is the _probability distribution_ of our random variable. Knowing this distribution will be extremely helpful because we can, for example, report the probability that our error is smaller than a particular quantity. In the next section we describe a powerful mathematical result that helps simplify this.
 
@@ -259,7 +259,7 @@ $$Z = \sqrt{N}\frac{ \hat{p} - p}{\sqrt{\hat{p} (1-\hat{p})}}$$
 is approximately normal with expected 0 and standard deviation 1.
 
 Assessment: What value can we make $z$ so that 
-$\mbox{Pr}(\mid Z \mid \leq z) = 0.95$ ?
+$\mbox{Pr}(\mid Z \mid \leq z) = 0.95$ ? [http://goo.gl/forms/D6ngZ4Effd](http://goo.gl/forms/D6ngZ4Effd)
 
 
 So we have our interval. We need to actually define it in terms of $\hat{p}$, $N$, and $z$ because these are the only quantity we can actually construct. 
@@ -322,7 +322,7 @@ Notice how the interval is different after each poll: it's random. So the 95% re
 
 Pollsters are not successful for providing correct confidence intervals but rather for predicting who will win. Unfortunately, our confidence interval included $0.5$ so if forced to declare a winner, we would have to say it was a "toss-up". A problem with our poll results is that, given the sample size and the value of $p$, we would have to sacrifice on the probability of an incorrect call to create an interval that does not include 50. In this particular case, the reported margin of error would have had to be about 3.5%
  
-Assessment: What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation.
+Assessment: What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation. [http://goo.gl/forms/CIrlMKhtTq](http://goo.gl/forms/CIrlMKhtTq)
 
 Define 
 $$ \delta = 0.035$$
