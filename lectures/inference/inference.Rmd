@@ -127,7 +127,6 @@ X <- sample( c(-1,1), 10, replace = TRUE, prob=c(10/19, 9/19))
 sum(X)
 ```
 
-Assessment: Develop a sampling model for betting on 7 on roulette:
 
 ## The Expected Value and Standard Error
 
@@ -144,7 +143,9 @@ $$\mu = \frac{1}{n}\sum_{i=1}^n x_i$$
 
 We can see that the average of values inside a jar with 0s and 1s is the number of 1s divided by $n$. This is the proportion of 1s. In general if a jar has two values $a$ and $b$ with proportions $p$ and $(1-p)$ respectively, the average is $ap + b(1-p)$.
 
-Assessment: What are the averages for the roulette examples? 
+#### Assessment: 
+
+What are the averages for the roulette examples? 
 - Betting on black 
 - Betting on 7
 
@@ -160,7 +161,8 @@ $$ \sigma = \sqrt{ \frac{1}{n} \sum_i^n (x_i - \mu)^2} $$
 
 we can derive, with a bit of math, that if a jar has two values $a$ and $b$ with proportions $p$ and $(1-p)$ respectively, the standard deviation is $\mid b - a \mid \sqrt{p(1-p)}$.
 
-Assessment: What are the expected value and standard errors of the number of democrats. Hint: The answers are functions of $p$, the proportion of democrats. 
+#### Assessment
+What are the expected value and standard errors of the number of democrats. Hint: The answers are functions of $p$, the proportion of democrats. 
 
 Let $S$ be the number of democrats in our sample, or the sum of the 25 draws. Our expected value is 
 
@@ -190,8 +192,9 @@ We do notice that by making $N$ larger we can make our standard error smaller. T
 
 ### Estimates
 
-Beacuse $S/25$ is $p$ plus or minus some chance error we use it as our _estimate_ of $p$. We usually put hats on top of our estimates: $\hat{p}$. We now now that when $N$ is large $\hat{p} \approx p$.
+Because $S/25$ is $p$ plus or minus some chance error we use it as our _estimate_ of $p$. We usually put hats on top of our estimates: $\hat{p}$. We now now that when $N$ is large 
 
+$$\hat{p} \approx p$$.
 
 Suppose that after we take our poll we want to give a best guess for $p$. One way we could do this is to report the observed value and it's standard error. Unfortunately, we need to know $p$ to report an expected value. It turns out that plugging in the observed proportion,  works out pretty well. So we can report:
 
@@ -203,17 +206,39 @@ cat("Our estimate of the percent of decomrats is",p_hat,
 
 Which is not terribly useful. However, now we know that we can be more precise by taking a larger poll.
 
-Assessment: If $p=0.5$, how large should the poll be to have a standard error of 2% or less ? Then take a poll and report expected value and standard error
+#### Assessment
 
+If $p=0.5$, how large should the poll be to have a standard error of 2% or less ? Then take a poll and report expected value and standard error
+
+$$\sqrt{0.25/N} = 0.02$$ implies $$N = 0.25/0.02^2 = 625$$. 
+
+```{r}
+N <- 625
+X <- sample(x, N, replace = TRUE)
+p_hat <- mean(X)
+cat("Our estimate of the percent of decomrats is",p_hat,
+    "plus or minus", round( sqrt(p_hat*(1-p_hat)/N), 2))
+```
 
 ## Probability Distribution for Random Variables
 
 The plus or minus statements above are not very precise. Is it possible to say more? Can we, for example, compute the probability that $\hat{p}$ is within 1% of the actual $p$ ? It turns out that we can. First let's start with a Monte Carlo simulation. 
 
-Assessment: Repeat the exercise of taking a poll of 625 likely voters, 10,000 times. Without peaking at $p$ study the distribution of $\hat{p}-p$. Have we seen this distribution before? How often was our error smaller larger than 0.02? 
+#### Assessment: 
+Repeat the exercise of taking a poll of 625 likely voters, 10,000 times. Without peaking at $p$ study the distribution of $\hat{p}-p$. Have we seen this distribution before? How often was our error smaller larger than 0.02? 
+
+```{r}
+N <- 625
+B <- 10^4
+error <- replicate(B,{
+  X <- sample(x, N, replace = TRUE)
+  mean(X)-p
+})
+hist(error)
+mean(abs(error) > 0.02)
+```
 
 The distribution we see here is the _probability distribution_ of our random variable. Knowing this distribution will be extremely helpful because we can, for example, report the probability that our error is smaller than a particular quantity. In the next section we describe a powerful mathematical result that helps simplify this.
-
 
 ## Central Limit Theorem
 
@@ -221,7 +246,7 @@ We can see that the distribution of $\hat{p}$ is very well approximated with the
 
 ```{r}
 qqnorm(error)
-qqline(error)
+qqline(error,col=2)
 ```
 
 The fact that the distribution is centered at 0 confirms that the expected value of $\hat{p}$ is $p$. The fact that the standard deviation of the errors is 
@@ -239,6 +264,80 @@ pnorm(-1) + (1-pnorm(1))
 ```
 
 Notice that the Monte Carlo simulation is like conducting 10,000 polls. This of course is practically impossible. But the mathematical theory saves us from having to do this! Without just one poll we are able to say that our estimate is $\hat{p}$ and there is 32% chance that our error is larger than 2%. 
+
+
+### Assessment:
+
+Suppose you are consulting for a casino. They want to know how many $1 bets a person needs to make so that the probability of negative earnings is  less than 1 in 1,000. 
+
+1. We know that the average of the sampling model is -1/19 and the standard deviation is $\sigma = 2 \sqrt{10/19 \times 9/19}$. Run a Monte Carlo simulation with $N=400$ to learn about the distribution of the errors. Remember the error is the average winning minus $\mu = -1/19$.Confirm that the expected value of the error is 0 and that the standard error is $\sigma / \sqrt{N}$. 
+2. Confirm that the distribution is approximately normal with mean 0 and standard deviation $\sigma / N$
+
+
+3. How large does the error have to be for the casino to lose money?
+
+
+4. Use the CLT to compute the probability of a positive earnings. Confirm with the simulation results.
+
+
+5. With $N=400$ the probability of negative earnings is too high. What does $N$ need to be for the probability of positive earnings is 0? Confirm with a simulation.
+
+### Assessment
+
+In R we have access to a large population of male heights. We can access them like this
+
+```{r}
+data(father.son,package="UsingR")
+y <- father.son$sheight
+```
+
+Suppose you are demographer and want to get an estimate of the average height of this population. We can use sampling to do this as well. We will sample 25 men and measure them. 
+
+
+1. What is the average and standard deviation of our sampling model? What is the expected value and standard deviation.
+
+
+2. Consider the random variable defined by taking a sample of size $N$ and then computing the average. What are the expected value and standard error of this random variable:
+
+
+3. What is the probability that our estimate is within one inch of the population mean?
+
+
+Note that if we wanted to  compute this last quantity in practice we need to know $\sigma$. But we don't. 
+
+A common approach is to use the sample standard deviation as a stand-in. We define the sample standard deviation as
+
+$$
+s = \frac{1}{N-1}\sum_{i=1}^N (Y_i - \bar{Y})^2$$
+
+The function `sd` computes this quantity
+
+```{r}
+Y <- sample(y, N, replace=TRUE)
+sd(X)
+1 - pnorm(sqrt(N)/sd(Y))
+#is an approximation of
+sigma <- mean( (y-mean(y))^2)
+1 - pnorm(sqrt(N)/sigma)
+##that is completly derived from data
+```
+
+
+### The t-distribution (optional)
+
+If you have heard of the t-distribution, you should know that here is where we would use it. If the original data is normal, as height data is, then there is a better approximation for 
+
+$$\sqrt{N} \frac{\bar{X} - \mu}{s}$$
+
+than the normal distribution and it is the t-distribution. Note these are closer
+
+```{r}
+1 - pnorm(sqrt(N)/sigma)
+#is an approximation of
+1 - pt(sqrt(N)/sd(X), N-1)
+1 - pnorm(sqrt(N)/sd(X))
+```
+
 
 ## Confidence Intervals
 
@@ -258,17 +357,29 @@ $$Z = \sqrt{N}\frac{ \hat{p} - p}{\sqrt{\hat{p} (1-\hat{p})}}$$
 
 is approximately normal with expected 0 and standard deviation 1.
 
-Assessment: What value can we make $z$ so that 
+#### Assessment 
+What value can we make $z$ so that 
 $\mbox{Pr}(\mid Z \mid \leq z) = 0.95$ ?
 
+Answer:
+$$z = \Phi^{-1}(0.975)$$
+
+Because:
+```{r}
+z = qnorm(0.975)
+pnorm(z) - pnorm(-z)
+```
 
 So we have our interval. We need to actually define it in terms of $\hat{p}$, $N$, and $z$ because these are the only quantity we can actually construct. 
 
-Assessment: 
+
+
+#### Assessment: Practice the math
+
 How do we rewrite the event $$ Z \leq z$$ so that it can be written as an interval of quantities we know.
 
 
-This interval has a 95% chance of including the true $p$
+This interval has a 95% chance of _covering_ the true $p$
 
 Did we actually make a correct prediction? It's election night and we we will find out
 
@@ -278,7 +389,32 @@ p
 ci[1] <= p & ci[2] >= p
 ```
 
-Assessment: Construct a 99% confidence interval. Is it more or less specific than the 95%?
+#### Assessment
+Construct a 99% confidence interval. Is it more or less specific than the 95%?
+```{r}
+p_hat + c(-1,1)*qnorm(0.995)*sqrt(p_hat*(1-p_hat))/sqrt(N)
+```
+
+#### Assessment
+You have a coin. You want to figure out if it's fair or not. To create your coin run the following code:
+
+```{r}
+set.seed(2016)
+prob_heads <- sample(c(0.5, 0.6, 0.4),1)
+```
+
+1. Now the probability is set. The coin is either fair or not, but we don't know which. Use a Monte Carlo simulation to toss your coin 100 times. Report the proportion of heads
+
+
+2. Is it fair? Use CLT to construct a 95% confidence based on this estimate.
+
+
+3. Does the interval cover the true value of `prob_head`?
+
+
+4. No use a Monte Carlo simulation to re run this experiment (keeping `prob_hear` fixed) 10000 times. Do we confirm that we cover 95% of the time?
+
+
 
 ### Confidence Intervals: Monte Carlo Simulaion 
 
@@ -291,7 +427,7 @@ Later we will learn about Bayesian statistics were data-based statements such as
 The 95% confidence interval 
 
 ```{r}
-p_hat + c(-1,1)*qnorm(0.995)*sqrt(p_hat*(1-p_hat))/sqrt(N)
+p_hat + c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(N)
 ```
 
 is random because $p_hat$ is random.  Let's use a Monte Carlo simulation to see this:
@@ -304,7 +440,7 @@ B <- 100
 tab  <- replicate(B,{
   X <- sample(x, N, replace = TRUE)
   p_hat <- mean(X)
-  ci <- p_hat + c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(N)
+  ci <- p_hat + c(-1,1)*qnorm(0.995)*sqrt(p_hat*(1-p_hat))/sqrt(N)
   hit <- ci[1] <= p  & ci[2] >= p
   c(p_hat,ci,hit)
 })
@@ -317,93 +453,32 @@ ggplot(tab, aes(poll,estimate,ymin=low,ymax=high,col=hit)) +geom_point(aes())+ge
 
 Notice how the interval is different after each poll: it's random. So the 95% relates to the probability that this random interval falls on top of $p$, not that $p<.50$ or whatever other statements related to the probability of winning. In the figure above, that shows the interval for 100 polls, you can see that interval fall on $p$ about 95% of the time.
 
-
 ### Power
 
 Pollsters are not successful for providing correct confidence intervals but rather for predicting who will win. Unfortunately, our confidence interval included $0.5$ so if forced to declare a winner, we would have to say it was a "toss-up". A problem with our poll results is that, given the sample size and the value of $p$, we would have to sacrifice on the probability of an incorrect call to create an interval that does not include 50. In this particular case, the reported margin of error would have had to be about 3.5%
  
-Assessment: What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation.
+### Assessment
 
-Define 
-$$ \delta = 0.035$$
-We want to know
-$$\mbox{Pr}( - \delta < \mid p - \hat{p} \mid < \delta)$$
-$$\mbox{Pr}( | Z | < \sqrt{N} \delta/\sqrt{p(1-p)})$$
+What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation.
 
-Because $Z$ is approximately standard normal this probability is approximately
-```{r}
-a = sqrt(N)*.035/sqrt(p_hat*(1-p_hat))
-pnorm(a)-pnorm(-a)
-```
-This a .91% confidence interval. Which is not bad, but it's not the 95% we set out for. 
 
-```{r}
-N <- 625
-B <- 10^5
-success  <- replicate(B,{
-  X <- sample(x, N, replace = TRUE)
-  p_hat <- mean(X)
-  ci <- p_hat + c(-0.035,0.035)
-  ci[1] <= p  & ci[2] >= p
-})
-mean(success)
-```
+### Assessment
 
-Assessment: If we know the percent of democrats can be as close to 50% as 48%, how large does the sample size have to be so that the margin of error is about 2%.
+If we know the percent of democrats can be as close to 50% as, say, 48%, how large does the sample size have to be so that the margin of error is about 2%.
 
 
 If you go back to the table with which we started, you notice that many polls have sample sizes between 500 and 2500. 
 
-## Averaging polls
 
-So why was Nate Silver so confident?
+#### Assessment 
 
-The table shown above had several polls. We can assume they were independently run. If this is the case we have access to 
+From the `polls` object determine the sample size from the margin of error. The plot it against the reported sample size.
 
-```{r}
-polls %>% summarise(sum(observations))
-```
-
-samples. We can aggregate these polls. We have $k=1,\dots,K$ polls each with $N_k$ observations and en estimate $\hat{p}_k$. We can infer then that for poll $k$, $N_k \hat{p}_k$ are voting for Obama. So the aggregate $\hat{p}$ is
-
-$$
-\frac{\sum_{k=1}^K \hat{p}_k N_k}{\sum_{k=1}^K N_k}
-$$
-which can be viewed as a weighted average:
-
-$$
-\sum_{k=1}^P w_k \hat{p}_k \mbox{ with } w_k = \frac{N_k}{\sum_{k=1}^K N_k}
-$$
-
-Let's compute this for Obama and Romney (we assume the undecided at random)
-
-```{r}
-O <- sum(polls$Obama*polls$observations)/sum(polls$observations)/100
-R <- sum(polls$Romney*polls$observations)/sum(polls$observations)/100
-```
-
-and the difference is 
-```{r}
-round(O-R,2)
-```
-
-The margin of error for each one is:
-
-```{r}
-N <- sum(polls$observations)
-round( qnorm(.975)*sqrt(O*(1-O))/sqrt(N), 3)
-round( qnorm(.975)*sqrt(R*(1-R))/sqrt(N), 3)
-```
-
-Now we have two confidence intervals?  We can form a confidence interval for the difference. The difference is approximately $\hat{p} - (1-\hat{p})$ or $1-2\hat{p}$. This implies that the standard error for the difference is twice as large than for $\hat{p}$. So our confidence interval is:
-
-```{r}
-O-R + c(-2,2)*qnorm(.975)*sqrt(O*(1-O))/sqrt(N)
-```
-
-So a 95% confidence interval still didn't quite call the election for Obama (but it was close). However, as we will learn there was much more invovled in the "90% chance of winning"" prediction which we will learn next.
-
-
+What do you see?
+A - A flat line
+B - Exactly a straight line
+C - Almost a straight line with some points off
+D - The function $ f(x)=\sqrt(x)$
 
 #### Setting the random seed
 
