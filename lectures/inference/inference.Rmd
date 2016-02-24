@@ -270,35 +270,134 @@ Notice that the Monte Carlo simulation is like conducting 10,000 polls. This of 
 
 Suppose you are consulting for a casino. They want to know how many $1 bets a person needs to make so that the probability of negative earnings is  less than 1 in 1,000. 
 
-1. We know that the average of the sampling model is -1/19 and the standard deviation is $\sigma = 2 \sqrt{10/19 \times 9/19}$. Run a Monte Carlo simulation with $N=400$ to learn about the distribution of the errors. Remember the error is the average winning minus $\mu = -1/19$.Confirm that the expected value of the error is 0 and that the standard error is $\sigma / \sqrt{N}$. http://goo.gl/forms/YHQgejqKfl
+1. We know that the average of the sampling model is -1/19 and the standard deviation is $\sigma = 2 \sqrt{10/19 \times 9/19}$. Run a Monte Carlo simulation with $N=400$ to learn about the distribution of the errors. Remember the error is the average winning minus $\mu = -1/19$.Confirm that the expected value of the error is 0 and that the standard error is $\sigma / \sqrt{N}$. 
+```{r}
+N <- 400
+B <- 10^5
+mu <- -1/19
+sigma <- 2*sqrt(9/19*10/19) 
+error <- replicate(B,{
+  X <- sample( c(-1,1), N, replace=TRUE, prob=(c(10/19,9/19)) )
+  mean(X) - mu
+})
+mean(error)                
+sqrt( mean( error^2))
+sigma/sqrt(N)
+```
 
-2. Confirm that the distribution is approximately normal with mean 0 and standard deviation $\sigma / N$ http://goo.gl/forms/5iET73x0dR
+2. Confirm that the distribution is approximately normal with mean 0 and standard deviation $\sigma / N$
 
-3. How large does the error have to be for the casino to lose money? http://goo.gl/forms/q7Ov6hl5le
+```{r}
+z <- error/ (sigma / sqrt(N)  )
+qqnorm(z)
+abline(0,1)
+```
 
-4. Use the CLT to compute the probability of a positive earnings. Confirm with the simulation results. http://goo.gl/forms/7TWqQdrWuf
+3. How large does the error have to be for the casino to lose money?
 
+```{r}
+## if x is 0, the the error is:
+0 - mu
+```
 
-5. With $N=400$ the probability of negative earnings is too high. What does $N$ need to be for the probability of positive earnings is 0? Confirm with a simulation. http://goo.gl/forms/2uRkCr5nHI
+4. Use the CLT to compute the probability of a positive earnings. Confirm with the simulation results.
+
+Let $S$ be the sum of the draws.
+
+$$ Z = \sqrt{N} \frac{S/N - \mu}{\sigma}$$ 
+
+is standard normal. We want to know 
+
+$$\mbox{Pr(S/N > 0)}$$
+
+We rewrite both sides so that $Z$ is on the left:
+
+$$\mbox{Pr}(\sqrt{N} \frac{S/N - \mu}{\sigma} > -\sqrt{N}\frac{\mu}{\sigma})$$
+
+which is
+
+$$\mbox{Pr}(Z > -\sqrt{N}\frac{\mu}{\sigma})$$
+
+and we can compute
+
+```{r}
+1 - pnorm( -sqrt(N)*mu/sigma )
+##and compare to
+mean(error > -mu)
+```
+
+5. With $N=400$ the probability of negative earnings is too high. What does $N$ need to be for the probability of positive earnings is 0? Confirm with a simulation.
+
+We know that if $z = \Phi^{-1}(1-10^{-3})$ then 
+
+$$\mbox{Pr}(Z > z) = 10^{-3}$$
+
+So we need 
+
+$$-\sqrt{N}\frac{\mu}{\sigma} = \Phi^{-1}(1-10^{-3})$$
+
+or
+
+$$ N = (-\Phi^{-1}(1-10^{-3}) \sigma / \mu)^2$$
+
+```{r}
+N <- ceiling( -qnorm(1-10^-3)*sigma/mu )^2
+```
+
+Lets' confirm:
+```{r}
+N <- ceiling( -qnorm(1-10^-3)*sigma/mu )^2
+B <- 10^5
+mu <- -1/19
+sigma <- 2*sqrt(9/19*10/19) 
+profit <- replicate(B,{
+  X <- sample( c(-1,1), N, replace=TRUE, prob=(c(10/19,9/19)) )
+  mean(X)
+})
+mean(profit>0)
+```
 
 ### Assessment
 
 In R we have access to a large population of male heights. We can access them like this
 
 ```{r}
-data(father.son,package="UsingR")
+data(father.son, package="UsingR")
 y <- father.son$sheight
 ```
 
 Suppose you are demographer and want to get an estimate of the average height of this population. We can use sampling to do this as well. We will sample 25 men and measure them. 
 
 
-1. What is the average and standard deviation of our sampling model? What is the expected value and standard deviation. http://goo.gl/forms/0NfIk7PkpC
+1. What is the average and standard deviation of our sampling model? What is the expected value and standard deviation.
+
+```{r}
+mu <- mean(y)
+sigma <- sqrt(mean((y-mu)^2))
+```
 
 
-2. Consider the random variable defined by taking a sample of size $N$ and then computing the average. What are the expected value and standard error of this random variable? http://goo.gl/forms/zradVEY58t
+2. Consider the random variable defined by taking a sample of size $N$ and then computing the average. What are the expected value and standard error of this random variable:
 
-3. What is the probability that our estimate is within one inch of the population mean? http://goo.gl/forms/zIiqhGuVCl
+```{r}
+N <- 25
+mu
+sigma/sqrt(N)
+```
+
+3. What is the probability that our estimate is within one inch of the population avergae?
+
+Let's call the sample average 
+
+$$\bar{Y} = \frac{1}{N}\sum_{i=1}^N Y_i$$ 
+
+Then we have
+$$
+\mbox{Pr}(\mid \bar{Y}-\mu \mid \leq 1) = \mbox{Pr}(\sqrt{N} \mid \bar{Y}-\mu \mid / \sigma \leq \sqrt{N} 1/\sigma) 
+$$
+```{r}
+(pnorm(sqrt(N)/sigma) - pnorm(-sqrt(N)/sigma))
+```
 
 Note that if we wanted to  compute this last quantity in practice we need to know $\sigma$. But we don't. 
 
@@ -314,7 +413,6 @@ Y <- sample(y, N, replace=TRUE)
 sd(X)
 1 - pnorm(sqrt(N)/sd(Y))
 #is an approximation of
-sigma <- sqrt(mean((y-mean(y))^2))
 1 - pnorm(sqrt(N)/sigma)
 ##that is completly derived from data
 ```
@@ -356,7 +454,7 @@ is approximately normal with expected 0 and standard deviation 1.
 
 #### Assessment 
 What value can we make $z$ so that 
-$\mbox{Pr}(\mid Z \mid \leq z) = 0.95$? http://goo.gl/forms/XmMeUchfz5
+$\mbox{Pr}(\mid Z \mid \leq z) = 0.95$ ?
 
 Answer:
 $$z = \Phi^{-1}(0.975)$$
@@ -373,11 +471,23 @@ So we have our interval. We need to actually define it in terms of $\hat{p}$, $N
 
 #### Assessment: Practice the math
 
-How do we rewrite the event $$ Z \leq z$$ so that it can be written as an interval of quantities we know.
+How do we rewrite the event $$ \mid Z \mid \leq z$$ so that it can be written as an interval of quantities we know.
+
+$$\mid Z \mid= \sqrt{N}\frac{\mid  \hat{p} - p \mid}{\sqrt{\hat{p} (1-\hat{p})}}  \leq z$$
+
+$$ \mid \hat{p} - p \mid \leq z \sqrt{\hat{p} (1-\hat{p})} \sqrt{N}$$
+
+Assuming $z$ is positive, 
+
+$$ \hat{p} - z \sqrt{\hat{p} (1-\hat{p})} / \sqrt{N} \leq p \leq \hat{p}  + z \sqrt{\hat{p} (1-\hat{p})} / \sqrt{N}$$
+
+```{r}
+p_hat + c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(N)
+```
 
 This interval has a 95% chance of _covering_ the true $p$
 
-Did we actually make a correct prediction? It's election night and we we will find out. http://goo.gl/forms/xiMwzrIC1J
+Did we actually make a correct prediction? It's election night and we we will find out
 
 ```{r}
 ci <- p_hat + c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(N)
@@ -386,7 +496,7 @@ ci[1] <= p & ci[2] >= p
 ```
 
 #### Assessment
-Construct a 99% confidence interval. Is it more or less specific than the 95%? http://goo.gl/forms/8kCxwTptIX
+Construct a 99% confidence interval. Is it more or less specific than the 95%?
 ```{r}
 p_hat + c(-1,1)*qnorm(0.995)*sqrt(p_hat*(1-p_hat))/sqrt(N)
 ```
@@ -399,17 +509,46 @@ set.seed(2016)
 prob_heads <- sample(c(0.5, 0.6, 0.4),1)
 ```
 
-1. Now the probability is set. The coin is either fair or not, but we don't know which. Use a Monte Carlo simulation to toss your coin 100 times. Report the proportion of heads. http://goo.gl/forms/AakupfnzOq
+1. Now the probability is set. The coin is either fair or not, but we don't know which. Use a Monte Carlo simulation to toss your coin 100 times. Report the proportion of heads
 
+```{r}
+N <- 100
+X <- sample(c(0,1), N, replace=TRUE,
+            prob=c(1-prob_heads,prob_heads))
+ph_hat <- mean(X)
+ph_hat
+```
 
-2. Is it fair? Use CLT to construct a 95% confidence based on this estimate. http://goo.gl/forms/RCUHxhAFn3
+2. Is it fair? Use CLT to construct a 95% confidence based on this estimate.
 
+```{r}
+conf_int <- ph_hat +
+  c(-1,1)*qnorm(0.975)*sqrt(ph_hat*(1-ph_hat))/
+  sqrt(N)
+conf_int
+```
 
-3. Does the interval cover the true value of `prob_head`? http://goo.gl/forms/jXeOvBcAJg
+3. Does the interval cover the true value of `prob_head`?
 
+```{r}
+prob_heads>=ci[1] & prob_heads<=ci[2]
+```
 
-4. No use a Monte Carlo simulation to re run this experiment (keeping `prob_hear` fixed) 10000 times. Do we confirm that we cover 95% of the time? http://goo.gl/forms/GqHUcZkSDM
+4. No use a Monte Carlo simulation to re run this experiment (keeping `prob_hear` fixed) 10000 times. Do we confirm that we cover 95% of the time?
 
+```{r}
+B <- 10000
+cover <- replicate(B,{
+  X <- sample(c(0,1), N, replace=TRUE,
+            prob=c(prob_heads,1-prob_heads))
+  ph_hat <- mean(X)
+  ci <- ph_hat +
+    c(-1,1)*qnorm(0.975)*sqrt(ph_hat*(1-ph_hat))/
+    sqrt(N)
+  prob_heads>=ci[1] & prob_heads<=ci[2]
+})
+mean(cover)
+```
 
 
 ### Confidence Intervals: Monte Carlo Simulaion 
@@ -455,25 +594,63 @@ Pollsters are not successful for providing correct confidence intervals but rath
  
 ### Assessment
 
-What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation. http://goo.gl/forms/jKADt1Q9d5
+What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation.
+
+Define 
+$$ \delta = 0.035$$
+We want to know
+$$\mbox{Pr}( - \delta < \mid p - \hat{p} \mid < \delta)$$
+$$\mbox{Pr}( | Z | < \sqrt{N} \delta/\sqrt{p(1-p)})$$
+
+Because $Z$ is approximately standard normal this probability is approximately
+```{r}
+a = sqrt(N)*.035/sqrt(p_hat*(1-p_hat))
+pnorm(a)-pnorm(-a)
+```
+This a .91% confidence interval. Which is not bad, but it's not the 95% we set out for. 
+
+```{r}
+N <- 625
+B <- 10^5
+success  <- replicate(B,{
+  X <- sample(x, N, replace = TRUE)
+  p_hat <- mean(X)
+  ci <- p_hat + c(-0.035,0.035)
+  ci[1] <= p  & ci[2] >= p
+})
+mean(success)
+```
 
 ### Assessment
 
-If we know the percent of democrats can be as close to 50% as, say, 48%, how large does the sample size have to be so that the margin of error is about 2%. http://goo.gl/forms/xi4Gp5FoIZ
+If we know the percent of democrats can be as close to 50% as, say, 48%, how large does the sample size have to be so that the margin of error is about 2%.
+
+Solution we need: We add $z_{95} \sqrt{p(1-p)}\sqrt{N}$ and we want this to be 0.02. So
+
+```{r}
+(qnorm(0.975)*sqrt(0.48*0.52)/0.02)^2
+```
 
 If you go back to the table with which we started, you notice that many polls have sample sizes between 500 and 2500. 
 
 
 #### Assessment 
 
-From the `polls` object determine the sample size from the margin of error. Then plot it against the reported sample size. 
-http://goo.gl/forms/bDQNcfHQbQ
+From the `polls` object determine the sample size from the margin of error. The plot it against the reported sample size.
 
 What do you see?
 A - A flat line
 B - Exactly a straight line
 C - Almost a straight line with some points off
 D - The function $ f(x)=\sqrt(x)$
+
+```{r}
+p_hat <- polls$Obama/100
+N <- ( qnorm(0.975) * sqrt(p_hat*(1-p_hat)) / 
+         (polls$margin_of_error/100))^2
+plot(N, polls$observations)
+abline(0,1)
+```
 
 #### Setting the random seed
 
