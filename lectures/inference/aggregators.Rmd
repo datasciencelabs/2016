@@ -1,0 +1,158 @@
+---
+title: "Poll Aggregators"
+output: html_document
+---
+
+## In-class questions
+We're going to try something new today. If you have small technical questions during class, go to this [link](https://docs.google.com/document/d/1rClyG2ZMoTM9tER9zjXCBT-26lrpuIH_oSkCLCI6pII/edit?usp=sharing) and ask away.
+
+
+## Averaging polls
+
+
+```{r, echo=FALSE, cache=TRUE, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pollstR)
+
+theme_set(theme_bw())
+
+race2012 <- pollstr_polls(topic = '2012-president', after= as.Date("2012-11-3"), max_pages = Inf)
+
+polls <- race2012$questions %>% 
+  filter(topic=="2012-president" & state=="US") %>% 
+  select(choice, value, margin_of_error, observations, id) %>% 
+  filter(choice %in% c("Obama","Romney") & !is.na(margin_of_error)) %>% 
+  spread(choice, value) %>% 
+  left_join(select(race2012$polls, id, pollster, method), by="id") %>%
+  filter(method!="Internet") %>%
+  mutate(diff= Obama - Romney) %>%
+  select(pollster, diff, Obama, Romney, margin_of_error, observations)
+
+arrange(polls,diff) %>% rename( n=observations) %>% 
+  mutate(pollster=ifelse(pollster=="PPP (D-Americans United for Change)","PPP",pollster))
+```
+
+
+Given that so many polls pointed to a toss up, why was Nate Silver so confident?
+
+
+## Competition Data
+
+Let's start by looking at our competition data.
+
+```{r}
+library(readr)
+filename <- "https://raw.githubusercontent.com/datasciencelabs/data/master/blue-bead-comp-results.csv"
+tab <- read_csv(filename)
+names(tab)<-c("timestamp", "name", "estimate","N","ci")
+```
+
+Looking at the data, are there more blue or red balls?
+
+BTW, the winners are:
+
+```{r}
+date <- sapply(strsplit(tab$timestamp," "), function(x)x[1])
+date <- as.Date(date,"%m/%d/%Y")
+tab %>% mutate(date = date) %>% filter(date<"2016-02-23") %>%
+  mutate(diff = abs(estimate - 53.4)) %>% arrange(diff) 
+```
+
+Now back to aggregating:
+
+```{r}
+tab <- mutate(tab,estimate=ifelse(estimate<1, estimate*100, estimate))
+boxplot(tab$estimate)
+
+tab = filter(tab, estimate>20)
+```
+
+
+So now it's my turn to enter a competing entry. 
+
+We can assume that all these entries were based on independent data. So this data actually shows data for
+
+```{r}
+tab %>% summarise(sum(N))
+```
+
+We can deduce how many blue and red beads the first person saw:
+
+```{r}
+slice(tab,1)
+```
+
+In general we know each person saw
+
+```{r}
+tab %>% mutate(blue = estimate/100 * N, red = (1-estimate/100) * N) %>% select(blue, red)
+```
+
+So we can add these all up and create an estimate on thousands of draws:
+
+We have $k=1,\dots,K$ polls each with $N_k$ observations and en estimate $\hat{p}_k$. We can deduce then that for poll $k$, $N_k \hat{p}_k$ are blue. So the aggregate $\hat{p}$ is
+
+$$
+\frac{\sum_{k=1}^K \hat{p}_k N_k}{\sum_{k=1}^K N_k}
+$$
+which can be viewed as a weighted average:
+
+$$
+\sum_{k=1}^P w_k \hat{p}_k \mbox{ with } w_k = \frac{N_k}{\sum_{k=1}^K N_k}
+$$
+
+So our new estimate is
+
+```{r}
+N <- sum(tab$N)
+p_hat <- sum(tab$estimate*tab$N)/N
+```
+
+And our confidence interval is pretty tight:
+```{r}
+c(-1,1)*qnorm(0.975)*sqrt(p_hat/100*(1-p_hat/100))/sqrt(N)*100
+```
+
+## Back to the 2012 Election
+
+Let's compute this for Obama and Romney (we assume the undecided at random)
+
+```{r}
+O <- sum(polls$Obama*polls$observations)/sum(polls$observations)/100
+R <- sum(polls$Romney*polls$observations)/sum(polls$observations)/100
+```
+
+and the difference is 
+```{r}
+round(O-R,2)
+```
+
+The margin of error for each one is:
+
+```{r}
+N <- sum(polls$observations)
+round( qnorm(.975)*sqrt(O*(1-O))/sqrt(N), 3)
+round( qnorm(.975)*sqrt(R*(1-R))/sqrt(N), 3)
+```
+
+Now we have two confidence intervals?  We can form a confidence interval for the difference. The difference is approximately $\hat{p} - (1-\hat{p})$ or $1-2\hat{p}$. This implies that the standard error for the difference is twice as large than for $\hat{p}$. So our confidence interval is:
+
+```{r}
+O-R + c(-2,2)*qnorm(.975)*sqrt(O*(1-O))/sqrt(N)
+```
+
+So a 95% confidence interval still didn't quite call the election for Obama (but it was close). However, as we will learn there was much more involved in the "90% chance of winning"" prediction which we will learn next.
+
+## More Polls
+ 
+Let's get polls for two months before. 
+
+####Assessment: 
+Adapt the code above to make a plot of difference between Obama and Romney against time.
+
+
+
+# Questions?
+If you have any questions, please fill this out: http://goo.gl/forms/BWzC2kVNZC

@@ -1,0 +1,214 @@
+---
+title: "Homework 2: The Big Short"
+output: html_document
+---
+ 
+**This homework is due Friday February 26, 2016 at 5:00 PM. When complete, submit your code in the R Markdown file and the knitted HTML via GitHub.**
+
+# Background 
+
+This homework is motivated by circumstances surrounding the [financial crisis of 2007-2008](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308). We titled the homework _The Big Short_, after the book on the same topic that was also recently made into a movie.
+
+Part of what caused the financial crisis was that the risk of certain [securities](https://en.wikipedia.org/wiki/Security_(finance)) sold by financial institutions were  underestimated. Specifically, 
+the risk of mortgage-backed securities (MBS) and collateralized debt obligations (CDO), the price of which depends on homeowners making their monthly payments, was grossly underestimated. A combination of factors resulted in many more defaults than were expected. This resulted in a crash of the prices of these securities. As a consequence, banks lost so much money that they needed bailouts to avoid default.
+
+Here we present a **very** simplified version of what happened with some of these securities. Hopefully it will help you understand how a wrong assumption about the statistical behavior of events can lead to substantial differences between what the model predicts and what actually happens. Specifically, we will see how using an independence assumption can result in misleading conclusions. Before we start with the specific application we ask you about a simple casino game.
+
+# Problem 1
+
+In the game of [roullete](https://en.wikipedia.org/wiki/Roulette)
+you can bet on several things including black or red. On this bet, if you win, you double your earnings. How does the casino make money on this then? If you look at the [possibilities](http://www.math.uah.edu/stat/games/Roulette.png)
+you realize that the chance of red or black are both slightly less than 1/2. There are two green spots, so the of landing on black (or red) is actually 18/38, or 9/19.
+
+
+## Problem 1A
+
+Let's make a quick sampling model for this simple version of roulette. You are going to bet a dollar each time you play and always bet on black. Make a box model for this process using the `sample` function. Write a function `get_outcome` that takes as an argument the number of times you play $N$ and returns your earnings $S_N$.
+
+```{r}
+##Your code here
+```
+
+## Problem 1B
+
+Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for $N=10,25,100,1000$. That is, study the distribution of earnings for different number of plays. What are the distributions of these two random variables? How do the expected values and standard errors change with $N$? Then do the same thing for the average winnings $S_N/N$. What result that you learned in class predicts this?
+
+```{r}
+##Your code here
+```
+
+Your answer here.
+
+
+## Problem 1C
+
+What is the expected value of our sampling model? What is the standard deviation of our sampling model?
+
+Your answer here.
+
+## Problem 1D
+
+Use CLT to approximate the probability that the casino loses money when you play 25 times. Then use a Monte Carlo simulation to confirm.
+
+```{r}
+##Your code here
+```
+
+
+
+## Problem 1E
+
+In general, what is the probability that the casino loses money as a function of $N$? Make a plot for values ranging from 25 to 1,000. Why does the casino give you free drinks if you keep playing?
+
+```{r}
+##Your code here
+```
+
+Your answer here. 
+
+# Problem 2 
+
+You run a bank that has a history of identifying potential homeowners that can be trusted to make payments. In fact, historically, in a given year, only 2% of your customers default. You want to use stochastic models to get an idea of what interest rates you should charge to guarantee a profit this upcoming year. 
+
+## Problem 2A
+
+Your bank gives out 1,000 loans this year. Create a sampling model and use the function `sample` to simulate the number of foreclosure in a year with the information that 2% of customers default. Also suppose your bank loses $120,000 on each foreclosure. Run the simulation for one year and report your loss.
+
+```{r}
+##your code here
+```
+
+## Problem 2B
+
+Note that the loss you will incur is a random variable. Use Monte Carlo simulation to estimate the distribution of this random variable. Use summaries and visualization to describe your potential losses to your board of trustees.
+
+```{r}
+##your code here
+```
+
+## Problem 2C
+
+The 1,000 loans you gave out were for $180,000. The way your bank can give out loans and not lose money is by charging an interest rate. If you charge an interest rate of, say, 2% you would earn $3,600 for each loan that doesn't foreclose. At what percentage should you set the interest rate so that your expected profit totals $100,000. Hint: Create a sampling model with expected value 100 so that when multiplied by the 1,000 loans you get an expectation of $100,000. Corroborate your answer with a Monte Carlo simulation.
+
+Your solution here. 
+```{r}
+###your code here
+```
+
+
+## Problem 2D
+
+In problem 2C, you were able to set a very low interest rate. Your customers will be very happy and you are expected to earn $100,000 in profits. However, that is just an expectation. Our profit is a random variable. If instead of a profit your bank loses money, your bank defaults. Under the conditions of Problem 2C, what is the probability that your profit is less than 0?
+
+```{r}
+##your code here
+```
+
+## Problem 2E
+
+Note that the probability of losing money is quite high. To what value would you have to raise interest rates in order to make the probability of losing money, and your bank and your job, as low as 0.001? What is the expected profit with this interest rate? Corroborate your answer with a Monte Carlo simulation.
+
+Hint: Use the following short cut. If $p$ fraction of a box are $a$s and $(1-p)$ are $b$s, then the SD of the list is $\mid a-b \mid \sqrt{p(1-p)}$ 
+
+Your solution here.
+
+```{r}
+###your code here
+```
+
+## Problem 2F
+
+Note that the Monte Carlo simulation gave a slightly higher probability than 0.001. What is a possible reason for this? 
+Hint: See if the disparity is smaller for larger values of $p$. Also check for probabilities larger than 0.001. Recall we made an assumption when we calculated the interest rate.
+
+
+```{r}
+##your code here
+```
+
+
+Your answer here.
+
+## Problem 3
+
+We were able to set an interest rate of about 2% that guaranteed a very low probability of having a loss. Furthermore, the expected average was over $1 million. Now other financial companies noticed the success of our business. They also noted that if we increase the number of loans we give, our profits increase. However, the pool of reliable borrowers was limited. So these other companies decided to give loans to less reliable borrowers but at a higher rate.
+
+## Problem 3A
+
+The pool of borrowers they found had a much higher default rate, estimated to be $p=0.05$. What interest rate would give these companies the same expected profit as your bank (Answer to 2E)? 
+
+```{r}
+##your code here
+```
+
+## Problem 3B 
+
+At the interest rate calculated in 3A what is the probability of negative profits? Use both the normal approximation and then confirm with a Monte Carlo simulation.
+
+```{r}
+##your code here
+```
+
+## Problem 3C 
+
+Note that the probability is much higher now. This is because the standard deviation grew. The companies giving out the loans did not want to raise interest rates much more since it would drive away clients. Instead they used a statistical approach. They increased $N$. How large does $N$ need to be for this probability to be 0.001? Use the central limit approximation and then confirm with a Monte Carlo simulation.
+
+Your answer here.
+```{r}
+###your code here
+```
+
+So by doubling the number of loans we were able to reduce our risk! Now, for this to work, all the assumptions in our model need to be approximately correct, including the assumption that the probability of default was **independent**. This turned out to be false and the main reason for the under estimation of risk.
+
+
+## Problem 3D
+
+Define the following matrix of outcomes for two borrowers using our previous box model:
+
+```{r}
+loan <- 180000
+loss_per_foreclosure <- 120000
+p2 <- 0.05
+interest_rate2 <- 0.05
+B <- 10^5
+outcomes1 <- replicate(B,{
+  sample( c(-loss_per_foreclosure, interest_rate2*loan ), 2, replace=TRUE, prob=c(p2, 1-p2))
+})
+```
+We can confirm independence by computing the probability of default for the second conditioned on the first defaulting: 
+
+```{r}
+sum( outcomes1[1,] < 0 & outcomes1[2,]<0)/sum(outcomes1[1,]<0)
+```
+
+This quantity is about the same as the probability of default $0.05$.
+
+Now we create a new model. Before generating each set of defaults, we assume that a random event occurred that makes all default probabilities go up or go down by 4 points. We could see how this would happen if, for example, demand for houses decreases and all house prices drop. 
+
+```{r}
+B <- 10^5
+outcomes2 <- replicate(B,{
+  add <- sample( c(-0.04,0.04), 1)
+  sample( c(-loss_per_foreclosure, interest_rate2*loan ), 2, replace=TRUE, prob=c(p2+add, 1-(p2+add)))
+})
+```
+
+Note that the outcomes are no longer independent as demonstrated by this result not being equal to 0.05
+
+```{r}
+sum( outcomes2[1,] < 0 & outcomes2[2,]<0)/sum(outcomes2[1,]<0)
+```
+
+
+Generate a simulation with correlated outcomes such as those above. This time use the interest rate calculated in 3A. What is the expected earnings under this model compared to the previous? What is the probability of losing $1 million compared to the previous? What is the probability of losing $10 million compared to the previous?
+
+
+
+```{r}
+###your code here
+```
+
+
+## Problem 4
+
+Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework can help explain the conditions that led to the crisis.
