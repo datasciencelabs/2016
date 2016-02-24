@@ -153,3 +153,6 @@ Let's get polls for two months before.
 Adapt the code above to make a plot of difference between Obama and Romney against time.
 
 
+
+# Questions?
+If you have any questions, please fill this out: http://goo.gl/forms/BWzC2kVNZC
