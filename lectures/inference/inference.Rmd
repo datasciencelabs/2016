@@ -466,7 +466,7 @@ If you go back to the table with which we started, you notice that many polls ha
 
 #### Assessment 
 
-From the `polls` object determine the sample size from the margin of error. The plot it against the reported sample size.
+From the `polls` object determine the sample size from the margin of error. Then plot it against the reported sample size. 
 http://goo.gl/forms/bDQNcfHQbQ
 
 What do you see?
