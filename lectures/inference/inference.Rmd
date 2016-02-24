@@ -270,16 +270,16 @@ Notice that the Monte Carlo simulation is like conducting 10,000 polls. This of 
 
 Suppose you are consulting for a casino. They want to know how many $1 bets a person needs to make so that the probability of negative earnings is  less than 1 in 1,000. 
 
-1. We know that the average of the sampling model is -1/19 and the standard deviation is $\sigma = 2 \sqrt{10/19 \times 9/19}$. Run a Monte Carlo simulation with $N=400$ to learn about the distribution of the errors. Remember the error is the average winning minus $\mu = -1/19$.Confirm that the expected value of the error is 0 and that the standard error is $\sigma / \sqrt{N}$. 
-2. Confirm that the distribution is approximately normal with mean 0 and standard deviation $\sigma / N$
+1. We know that the average of the sampling model is -1/19 and the standard deviation is $\sigma = 2 \sqrt{10/19 \times 9/19}$. Run a Monte Carlo simulation with $N=400$ to learn about the distribution of the errors. Remember the error is the average winning minus $\mu = -1/19$.Confirm that the expected value of the error is 0 and that the standard error is $\sigma / \sqrt{N}$. http://goo.gl/forms/YHQgejqKfl
+
+2. Confirm that the distribution is approximately normal with mean 0 and standard deviation $\sigma / N$ http://goo.gl/forms/5iET73x0dR
+
+3. How large does the error have to be for the casino to lose money? http://goo.gl/forms/q7Ov6hl5le
+
+4. Use the CLT to compute the probability of a positive earnings. Confirm with the simulation results. http://goo.gl/forms/7TWqQdrWuf
 
 
-3. How large does the error have to be for the casino to lose money?
-
-4. Use the CLT to compute the probability of a positive earnings. Confirm with the simulation results.
-
-
-5. With $N=400$ the probability of negative earnings is too high. What does $N$ need to be for the probability of positive earnings is 0? Confirm with a simulation.
+5. With $N=400$ the probability of negative earnings is too high. What does $N$ need to be for the probability of positive earnings is 0? Confirm with a simulation. http://goo.gl/forms/2uRkCr5nHI
 
 ### Assessment
 
@@ -293,12 +293,12 @@ y <- father.son$sheight
 Suppose you are demographer and want to get an estimate of the average height of this population. We can use sampling to do this as well. We will sample 25 men and measure them. 
 
 
-1. What is the average and standard deviation of our sampling model? What is the expected value and standard deviation.
+1. What is the average and standard deviation of our sampling model? What is the expected value and standard deviation. http://goo.gl/forms/0NfIk7PkpC
 
 
-2. Consider the random variable defined by taking a sample of size $N$ and then computing the average. What are the expected value and standard error of this random variable:
+2. Consider the random variable defined by taking a sample of size $N$ and then computing the average. What are the expected value and standard error of this random variable? http://goo.gl/forms/zradVEY58t
 
-3. What is the probability that our estimate is within one inch of the population mean?
+3. What is the probability that our estimate is within one inch of the population mean? http://goo.gl/forms/zIiqhGuVCl
 
 Note that if we wanted to  compute this last quantity in practice we need to know $\sigma$. But we don't. 
 
@@ -356,7 +356,7 @@ is approximately normal with expected 0 and standard deviation 1.
 
 #### Assessment 
 What value can we make $z$ so that 
-$\mbox{Pr}(\mid Z \mid \leq z) = 0.95$ ?
+$\mbox{Pr}(\mid Z \mid \leq z) = 0.95$? http://goo.gl/forms/XmMeUchfz5
 
 Answer:
 $$z = \Phi^{-1}(0.975)$$
@@ -377,7 +377,7 @@ How do we rewrite the event $$ Z \leq z$$ so that it can be written as an interv
 
 This interval has a 95% chance of _covering_ the true $p$
 
-Did we actually make a correct prediction? It's election night and we we will find out
+Did we actually make a correct prediction? It's election night and we we will find out. http://goo.gl/forms/xiMwzrIC1J
 
 ```{r}
 ci <- p_hat + c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(N)
@@ -386,7 +386,7 @@ ci[1] <= p & ci[2] >= p
 ```
 
 #### Assessment
-Construct a 99% confidence interval. Is it more or less specific than the 95%?
+Construct a 99% confidence interval. Is it more or less specific than the 95%? http://goo.gl/forms/8kCxwTptIX
 ```{r}
 p_hat + c(-1,1)*qnorm(0.995)*sqrt(p_hat*(1-p_hat))/sqrt(N)
 ```
@@ -399,16 +399,16 @@ set.seed(2016)
 prob_heads <- sample(c(0.5, 0.6, 0.4),1)
 ```
 
-1. Now the probability is set. The coin is either fair or not, but we don't know which. Use a Monte Carlo simulation to toss your coin 100 times. Report the proportion of heads
+1. Now the probability is set. The coin is either fair or not, but we don't know which. Use a Monte Carlo simulation to toss your coin 100 times. Report the proportion of heads. http://goo.gl/forms/AakupfnzOq
 
 
-2. Is it fair? Use CLT to construct a 95% confidence based on this estimate.
+2. Is it fair? Use CLT to construct a 95% confidence based on this estimate. http://goo.gl/forms/RCUHxhAFn3
 
 
-3. Does the interval cover the true value of `prob_head`?
+3. Does the interval cover the true value of `prob_head`? http://goo.gl/forms/jXeOvBcAJg
 
 
-4. No use a Monte Carlo simulation to re run this experiment (keeping `prob_hear` fixed) 10000 times. Do we confirm that we cover 95% of the time?
+4. No use a Monte Carlo simulation to re run this experiment (keeping `prob_hear` fixed) 10000 times. Do we confirm that we cover 95% of the time? http://goo.gl/forms/GqHUcZkSDM
 
 
 
@@ -455,11 +455,11 @@ Pollsters are not successful for providing correct confidence intervals but rath
  
 ### Assessment
 
-What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation.
+What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation. http://goo.gl/forms/jKADt1Q9d5
 
 ### Assessment
 
-If we know the percent of democrats can be as close to 50% as, say, 48%, how large does the sample size have to be so that the margin of error is about 2%.
+If we know the percent of democrats can be as close to 50% as, say, 48%, how large does the sample size have to be so that the margin of error is about 2%. http://goo.gl/forms/xi4Gp5FoIZ
 
 If you go back to the table with which we started, you notice that many polls have sample sizes between 500 and 2500. 
 
@@ -467,6 +467,7 @@ If you go back to the table with which we started, you notice that many polls ha
 #### Assessment 
 
 From the `polls` object determine the sample size from the margin of error. The plot it against the reported sample size.
+http://goo.gl/forms/bDQNcfHQbQ
 
 What do you see?
 A - A flat line
