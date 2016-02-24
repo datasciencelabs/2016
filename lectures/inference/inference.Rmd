@@ -276,7 +276,6 @@ Suppose you are consulting for a casino. They want to know how many $1 bets a pe
 
 3. How large does the error have to be for the casino to lose money?
 
-
 4. Use the CLT to compute the probability of a positive earnings. Confirm with the simulation results.
 
 
@@ -299,9 +298,7 @@ Suppose you are demographer and want to get an estimate of the average height of
 
 2. Consider the random variable defined by taking a sample of size $N$ and then computing the average. What are the expected value and standard error of this random variable:
 
-
 3. What is the probability that our estimate is within one inch of the population mean?
-
 
 Note that if we wanted to  compute this last quantity in practice we need to know $\sigma$. But we don't. 
 
@@ -317,7 +314,7 @@ Y <- sample(y, N, replace=TRUE)
 sd(X)
 1 - pnorm(sqrt(N)/sd(Y))
 #is an approximation of
-sigma <- mean( (y-mean(y))^2)
+sigma <- sqrt(mean((y-mean(y))^2))
 1 - pnorm(sqrt(N)/sigma)
 ##that is completly derived from data
 ```
@@ -377,7 +374,6 @@ So we have our interval. We need to actually define it in terms of $\hat{p}$, $N
 #### Assessment: Practice the math
 
 How do we rewrite the event $$ Z \leq z$$ so that it can be written as an interval of quantities we know.
-
 
 This interval has a 95% chance of _covering_ the true $p$
 
@@ -440,7 +436,7 @@ B <- 100
 tab  <- replicate(B,{
   X <- sample(x, N, replace = TRUE)
   p_hat <- mean(X)
-  ci <- p_hat + c(-1,1)*qnorm(0.995)*sqrt(p_hat*(1-p_hat))/sqrt(N)
+  ci <- p_hat + c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(N)
   hit <- ci[1] <= p  & ci[2] >= p
   c(p_hat,ci,hit)
 })
@@ -461,11 +457,9 @@ Pollsters are not successful for providing correct confidence intervals but rath
 
 What percent of confidence intervals with margins of error of 0.03 would correctly predict the election? Check with a Monte Carlo simulation.
 
-
 ### Assessment
 
 If we know the percent of democrats can be as close to 50% as, say, 48%, how large does the sample size have to be so that the margin of error is about 2%.
-
 
 If you go back to the table with which we started, you notice that many polls have sample sizes between 500 and 2500. 
 
