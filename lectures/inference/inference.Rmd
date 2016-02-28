@@ -105,7 +105,7 @@ Note how the observed number varies.  We refer to this as _random_ or _chance_ v
 
 ## Sampling Models
 
-Many procedures studied and used by data scientist can be modeled quite well as a sum of draws from a jar. For example, we modeled the process of polling likely voters as drawing 0s (republicans) and 1s (republicans) from a jar. To be more specific we can turn the `x` into 0s and 1s:
+Many procedures studied and used by data scientist can be modeled quite well as a sum of draws from a jar. For example, we modeled the process of polling likely voters as drawing 0s (republicans) and 1s (democrats) from a jar. To be more specific we can turn the `x` into 0s and 1s:
 
 ```{r}
 x <- as.numeric(x=="D")
