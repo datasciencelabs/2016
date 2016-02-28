@@ -652,6 +652,48 @@ plot(N, polls$observations)
 abline(0,1)
 ```
 
+## p-values
+
+p-values are ubiquotous in the scientific literature. They are related to confidence interval so we introduce the concept here. 
+
+Let's consider the blue and red beads. Suppose that rather than wanting an estimate of the percent of blue beads I am more interested in the question are ther more blue beads or red beads. 
+
+Suppose we take a random sample of $N=100$ and we observe 53 blue beads. This seems to be pointing to their being more blue than red. However, as data scientists we need to be skeptical. We know there is chance involved in this process and we could get a 53 even when the proportions of red and blue are the  same. We call this a _null hypothesis_. The null hypothesis is the skeptics hypothesis: the proportion of blue beads $p$ is 0.5. We have observed a random variable $\hat{p} = 0.53$ and the p-value is the answer to the question how likely is it to see a value this large, when the null hypothesis is true. So we write
+
+$$\mbox{Pr}(\mid \hat{p} - 0.5 \mid > 0.03 ) $$
+
+assuming the $p=0.5$. Under the null we know that 
+
+$$
+\sqrt{N}\frac{\hat{p} - 0.5}{\sqrt{0.5(1-0.5)}}
+$$
+
+is standard normal. So we can compute the probability above, which is the p-value.
+
+$$\mbox{Pr}(\sqrt{N}\frac{\mid \hat{p} - 0.5\mid}{\sqrt{0.5(1-0.5)}}> \sqrt{N} 0.03/ \sqrt{0.5(1-0.5)) $$
+
+
+```{r}
+N=100
+z <- sqrt(N)*0.03/0.5
+1 - (pnorm(0.6) - pnorm(-0.6))
+```
+
+So we do in fact have reason to be a skeptics. By constructing a p-value we see that 
+
+
+Assessment:
+Later we see an $\hat{p}=53.0347$ that was obtained with an $N=4397$. What is the p-value?
+
+
+
+
+
+
+
+
+
+
 #### Setting the random seed
 
 Before we continue, we briefly explain the following important line of
