@@ -37,6 +37,27 @@ This is a contrived example, but it will help us understand how we think about m
 
 If we are betting on black on roulette, we can let $Y_i$ be either -1 or 1. Now what is $\theta$ and what is the distribution of our error? What is the standard deviation of the errors? Hint: the expected value of the error must be 0.
 
+
+Answer: Our parameter is $\theta = -1/19$ and our errors are $1 - \theta$ with probability $9/19$ and $-1 - \theta$ with probability $10/19$. 
+
+Double check that the expected value is 0:
+```{r}
+20/19 * 9/19 - 18/19*10/19
+```
+
+The standard deviation we know is $2 \sqrt{ 9/19 \times 10/19}$. We can double check with a Monte Carlo
+
+```{r}
+B <- 10^5
+theta = -1/19
+Y <- sample( c(-1,1), B, replace=TRUE, prob=c(10/19, 9/19))
+error <- Y - theta
+prop.table(table(error))
+sqrt(mean(error^2))
+2*sqrt(10/19*9/19)
+```
+
+
 #### Assessment 2: http://goo.gl/forms/XLQQh69MUO
 
 Let's consider the example of a demographer trying to estimate the average height of a population. We use the heights stored in R:
