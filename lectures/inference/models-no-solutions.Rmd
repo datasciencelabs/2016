@@ -1,8 +1,12 @@
 ---
 title: "Models"
-output: html_document
+output: pdf_document
 fontsize: 12pt
 ---
+
+## In-class questions: 2/29/2016
+We're going to try something new today. If you have small technical questions during class, go to this [link](https://docs.google.com/document/d/1rClyG2ZMoTM9tER9zjXCBT-26lrpuIH_oSkCLCI6pII/edit?usp=sharing) and ask away.
+
 
 # Statistical Models
 
@@ -27,13 +31,34 @@ Each observation has an _error_ term $\varepsilon$. We assume that the expected 
 
 Let's consider some simple examples
 
-#### Assessment
+#### Assessment 1: http://goo.gl/forms/xN35fstJky
 
 This is a contrived example, but it will help us understand how we think about models and can use them in many situations. 
 
 If we are betting on black on roulette, we can let $Y_i$ be either -1 or 1. Now what is $\theta$ and what is the distribution of our error? What is the standard deviation of the errors? Hint: the expected value of the error must be 0.
 
-#### Assessment
+
+Answer: Our parameter is $\theta = -1/19$ and our errors are $1 - \theta$ with probability $9/19$ and $-1 - \theta$ with probability $10/19$. 
+
+Double check that the expected value is 0:
+```{r}
+20/19 * 9/19 - 18/19*10/19
+```
+
+The standard deviation we know is $2 \sqrt{ 9/19 \times 10/19}$. We can double check with a Monte Carlo
+
+```{r}
+B <- 10^5
+theta = -1/19
+Y <- sample( c(-1,1), B, replace=TRUE, prob=c(10/19, 9/19))
+error <- Y - theta
+prop.table(table(error))
+sqrt(mean(error^2))
+2*sqrt(10/19*9/19)
+```
+
+
+#### Assessment 2: http://goo.gl/forms/XLQQh69MUO
 
 Let's consider the example of a demographer trying to estimate the average height of a population. We use the heights stored in R:
 
@@ -51,7 +76,18 @@ Y <- sample(y, 25, replace = TRUE)
 
 What are $\theta$, $N$, and $\varepsilon_1$ ?
 
-#### Assessment 
+
+```{r}
+## N is 
+length(Y)
+## theta is 
+theta <- mean(y)
+## the firest error is 
+error_1 <- Y[1] - theta
+```
+
+
+#### Assessment 3: http://goo.gl/forms/CfamwJBctA
 
 Note that in this example each individual in the population has an _error_. It may sound a bit strange but, if you are 1 inch taller than the average height, we call it an "error" of 1 inch. Compute all the errors for the population and explore the distribution. What is the standard deviation of this distribution?
 
@@ -62,6 +98,17 @@ B) Approximately normal with $\sigma$ of about 3 inches. Tails are slightly larg
 C) These are not averages or sums so it is not approximately normal.
 
 D) Approximately normal with $\sigma$ of about 9 inches. Tails are slightly larger.
+
+
+```{r}
+error <- y - mean(y)
+hist(error)
+##the standard error is:
+sigma <- sqrt( mean( (error)^2 ))
+qqnorm(error/sigma)
+abline(0,1)
+```
+
 
 
 ## Modeling Poll Results
@@ -99,16 +146,30 @@ $$Y_i = \theta + \varepsilon_i, i=1, \dots, N$$
 
 with $N=22$.
 
-#### Assessment
+#### Assessment 4: http://goo.gl/forms/iyXi76a4b0
 
 Using the CLT theory we have learned, how do we model $\varepsilon$, what is the expected value and standard deviation of 
 $\varepsilon$? 
 
+Answer: According to CLT 
 
-#### Assessment 
+$$ \varepsilon \sim \mbox{Normal}\left( 0, \frac{\sqrt{\theta (1-\theta)}}{\sqrt{100}} \right)$$
+
+
+#### Assessment 5: http://goo.gl/forms/0sYp0gFnxZ
 
 We already revealed that $\theta = 0.534$. Use this information and 
 data exploration to check if the model assumptions make sense. 
+
+```{r}
+theta <- 0.534
+Y <- tab$estimate/100 
+error <- Y - theta
+hist(error)
+se <- sqrt(theta*(1-theta))/sqrt(100)
+qqnorm(error/se)
+abline(0,1)
+```
 
 
 
@@ -295,13 +356,17 @@ $$Y_i = \theta + \varepsilon_i, i=1, \dots, N$$
 
 with $N=22$.
 
-#### Assessment 
+#### Assessment 6: http://goo.gl/forms/BYmGozyUYX
 
 Using the CLT theory we have learned, how do we model $\varepsilon$, what is the expected value and standard deviation of 
 $\varepsilon$? 
 
+Answer: According to CLT 
 
-#### Assessment 
+$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{\sqrt{\theta (1-\theta)}}{\sqrt{800}}\right)$$
+
+
+#### Assessment 7: http://goo.gl/forms/ZAbd1crfK3
 
 Use data exploration to check if the model assumptions make sense. Note that we have the benefit of hindsight. The election night result was $\theta = 52.9 - 45.7 = 7.2$. 
 
@@ -312,6 +377,20 @@ B. The expected value and standard error as predicted, but the data is not norma
 C. The data look approximately normal but the expected and standard error are not what the theory predicts
 
 D. I have no idea what to do.
+
+
+```{r}
+Y <- filter(tab, N==800)$diff
+theta <- 7.2/100
+error <- Y- theta
+hist(error)
+se <- sqrt(theta*(1-theta)/800)
+qqnorm(error/se)
+abline(0,1)
+```
+
+It's not even close! What's going on. Well our model is clearly wrong. The $\varepsilon$ do not appear to have the predicted expected value nor standard error.
+
 
 
 ### Explaining variance
@@ -327,14 +406,24 @@ What could explain this variability?
 
 The first thing that comes to mind is that we polls are taken for over a year and the $\theta$ six months before the election might be different.
 
-#### Assessment
+#### Assessment 8: http://goo.gl/forms/GVpfbBu7V5
 
 Use ggplot to make a plot of the estimated difference versus day. What do you observe? Just form looking at the plot what would you say is that standard deviation of $\theta$ if we let it change with time?
+
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+tab %>% ggplot( aes(start_date, diff)) + geom_point() +
+  geom_hline(aes(yintercept=0))
+
+```
 
 
 The SD is at least 5%
 
-#### Assessment
+
+#### Assessment 9: http://goo.gl/forms/9q5SSXk6iM
 
 Take a look at polls that happened in 2008.
 
@@ -414,7 +503,7 @@ group_by(tab, week) %>% mutate(num_polls=n()) %>%
 ```
 
 
-### Assessment
+### Assessment 10: http://goo.gl/forms/ntaC4r5H7m
 
 Make the same plot to add bars that show 2 SD above and below the average. Answer the questions below.
 
