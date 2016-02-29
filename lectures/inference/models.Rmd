@@ -151,11 +151,25 @@ with $N=22$.
 Using the CLT theory we have learned, how do we model $\varepsilon$, what is the expected value and standard deviation of 
 $\varepsilon$? 
 
+Answer: According to CLT 
+
+$$ \varepsilon \sim \mbox{Normal}\left( 0, \frac{\sqrt{\theta (1-\theta)}}{\sqrt{100}} \right)$$
+
 
 #### Assessment 5: http://goo.gl/forms/0sYp0gFnxZ
 
 We already revealed that $\theta = 0.534$. Use this information and 
 data exploration to check if the model assumptions make sense. 
+
+```{r}
+theta <- 0.534
+Y <- tab$estimate/100 
+error <- Y - theta
+hist(error)
+se <- sqrt(theta*(1-theta))/sqrt(100)
+qqnorm(error/se)
+abline(0,1)
+```
 
 
 
