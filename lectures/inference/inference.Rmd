@@ -642,7 +642,7 @@ What do you see?
 A - A flat line
 B - Exactly a straight line
 C - Almost a straight line with some points off
-D - The function $ f(x)=\sqrt(x)$
+D - The function $f(x)=\sqrt(x)$
 
 ```{r}
 p_hat <- polls$Obama/100
@@ -651,6 +651,11 @@ N <- ( qnorm(0.975) * sqrt(p_hat*(1-p_hat)) /
 plot(N, polls$observations)
 abline(0,1)
 ```
+
+
+## In-class questions: 2/29/2016
+We're going to try something new today. If you have small technical questions during class, go to this [link](https://docs.google.com/document/d/1rClyG2ZMoTM9tER9zjXCBT-26lrpuIH_oSkCLCI6pII/edit?usp=sharing) and ask away.
+
 
 ## p-values
 
@@ -670,7 +675,7 @@ $$
 
 is standard normal. So we can compute the probability above, which is the p-value.
 
-$$\mbox{Pr}(\sqrt{N}\frac{\mid \hat{p} - 0.5\mid}{\sqrt{0.5(1-0.5)}}> \sqrt{N} 0.03/ \sqrt{0.5(1-0.5)) $$
+$$\mbox{Pr}\left(\sqrt{N}\frac{\mid \hat{p} - 0.5\mid}{\sqrt{0.5(1-0.5)}} > \sqrt{N} \frac{0.03}{ \sqrt{0.5(1-0.5)}}\right)$$
 
 
 ```{r}

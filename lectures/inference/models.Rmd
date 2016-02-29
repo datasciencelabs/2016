@@ -1,8 +1,12 @@
 ---
 title: "Models"
-output: html_document
+output: pdf_document
 fontsize: 12pt
 ---
+
+## In-class questions: 2/29/2016
+We're going to try something new today. If you have small technical questions during class, go to this [link](https://docs.google.com/document/d/1rClyG2ZMoTM9tER9zjXCBT-26lrpuIH_oSkCLCI6pII/edit?usp=sharing) and ask away.
+
 
 # Statistical Models
 
