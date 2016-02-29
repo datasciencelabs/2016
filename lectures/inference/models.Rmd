@@ -100,6 +100,17 @@ C) These are not averages or sums so it is not approximately normal.
 D) Approximately normal with $\sigma$ of about 9 inches. Tails are slightly larger.
 
 
+```{r}
+error <- y - mean(y)
+hist(error)
+##the standard error is:
+sigma <- sqrt( mean( (error)^2 ))
+qqnorm(error/sigma)
+abline(0,1)
+```
+
+
+
 ## Modeling Poll Results
 
 Let's start by looking at our guess-the-percent-of-blue-beads competition data. Let's use the code from the previous section:
