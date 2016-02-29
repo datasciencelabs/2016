@@ -670,7 +670,7 @@ $$
 
 is standard normal. So we can compute the probability above, which is the p-value.
 
-$$\mbox{Pr}(\sqrt{N}\frac{\mid \hat{p} - 0.5\mid}{\sqrt{0.5(1-0.5)}}> \sqrt{N} 0.03/ \sqrt{0.5(1-0.5)) $$
+$$\mbox{Pr}\left(\sqrt{N}\frac{\mid \hat{p} - 0.5\mid}{\sqrt{0.5(1-0.5)}}> \sqrt{N} 0.03/ \sqrt{0.5(1-0.5)}\right) $$
 
 
 ```{r}
