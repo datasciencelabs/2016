@@ -11,3 +11,7 @@ title: Homework
 ## HW2
 
 * [HW2 Assignment](https://github.com/datasciencelabs/2016/blob/master/homework/HW2)
+
+## HW3
+
+* [HW3 Assignment](https://github.com/datasciencelabs/2016/blob/master/homework/HW3)
