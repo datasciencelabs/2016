@@ -76,6 +76,17 @@ Y <- sample(y, 25, replace = TRUE)
 
 What are $\theta$, $N$, and $\varepsilon_1$ ?
 
+
+```{r}
+## N is 
+length(Y)
+## theta is 
+theta <- mean(y)
+## the firest error is 
+error_1 <- Y[1] - theta
+```
+
+
 #### Assessment 3: http://goo.gl/forms/CfamwJBctA
 
 Note that in this example each individual in the population has an _error_. It may sound a bit strange but, if you are 1 inch taller than the average height, we call it an "error" of 1 inch. Compute all the errors for the population and explore the distribution. What is the standard deviation of this distribution?
