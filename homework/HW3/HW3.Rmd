@@ -287,7 +287,7 @@ Trump beating Rubio in Florida.
 ```
 
 
-## Problem 4
+# Problem 4
 
 Use the poll data as well as the results from Super Tuesday (March 1st) and other election results that happen before the deadline to make predictions for each remaining primary. Then use these results to estimate the probability of Trump winning the republican nomination. Justify your answer with figures, statistical arguments, and Monte Carlo simulations.
 
