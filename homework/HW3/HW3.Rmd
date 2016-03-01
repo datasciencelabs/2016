@@ -144,7 +144,7 @@ to determine how to create a prediction for upcoming primaries.
 ## Problem 2A 
 
 Use an internet search to determine the results for the Iowa, 
-New Hampshire, Nevada and South Carolina primaries for the top three
+New Hampshire, Nevada and South Carolina primaries for the top two
 candidates. Create a table called `actual` with this information. 
 Also, create a column with the actual election difference.
 Use a join function to add this information to our `results` table. 
