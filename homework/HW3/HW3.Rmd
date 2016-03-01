@@ -135,7 +135,7 @@ Hint: `race2016$survey_house` has the information you need.
 ```
 
 
-## Problem 2
+# Problem 2
 
 We now have a table with all the information we need. We will now use 
 the results from Iowa, New Hampshire, Nevada and South Carolina 
@@ -209,7 +209,7 @@ impacts accuracy.
 ```
 
 
-# Problem 2F
+## Problem 2F
 
 For polls from IA, NH, and SC, aggregate all polls from within 1 week of the 
 election (use the `start_date` to determine cutoff) to provide a 
