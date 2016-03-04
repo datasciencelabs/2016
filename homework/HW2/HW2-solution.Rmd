@@ -248,6 +248,10 @@ qqline(profit)
 
 Also note that as the approximation is much better for value of $p$ closer 0.5
 ```{r}
+N <- 1000
+loan <- 180000
+p <- 0.02
+loss_per_foreclosure <- 120000
 B <- 10^5
 ps <- seq(0.02,0.5,len=10)
 res <- sapply(ps,function(p){
@@ -260,6 +264,7 @@ res <- sapply(ps,function(p){
   mean(profit<0) ##should be about 0.001
 })
 plot(ps,res)
+abline(h=0.001)
 ```
 
 When $p$ is close to 0 or 1, the central limit theorem needs larger $N$ for the approximation to work.
