@@ -135,11 +135,15 @@ sum(defaults * loss_per_foreclosure)
 Note that the loss you will incur is a random variable. Use Monte Carlo simulation to estimate the distribution of this random variable. Use summaries and visualization to describe your potential losses to your board of trustees.
 
 ```{r}
+N <- 1000
+loss_per_foreclosure <- 120000
+p <- 0.02
 B <- 10^4
 losses <- replicate(B, {
   defaults <- sample( c(0,1), N, prob=c(1-p, p), replace = TRUE) 
   sum(defaults * loss_per_foreclosure)
 })
+## Data looks normally distributed:
 hist(losses)
 par(mfrow=c(1,2))
 qqnorm(losses)
@@ -157,6 +161,7 @@ The box model must have an expected value of 100 so that the sum of 1,000 outcom
 
 Check with Monte Carlo simulation
 ```{r}
+N <- 1000
 loan <- 180000
 p <- 0.02
 loss_per_foreclosure <- 120000
@@ -176,6 +181,7 @@ mean(profit/N) ##should be about 100
 In problem 2C, you were able to set a very low interest rate. Your customers will be very happy and you are expected to earn $100,000 in profits. However, that is just an expectation. Our profit is a random variable. If instead of a profit your bank loses money, your bank defaults. Under the conditions of Problem 2C, what is the probability that your profit is less than 0?
 
 ```{r}
+## Run scripts above then:
 mean(profit < 0)
 ```
 
