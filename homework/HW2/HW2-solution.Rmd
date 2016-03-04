@@ -310,6 +310,8 @@ cat("New interest rate is:", interest_rate2)
 
 At the interest rate calculated in 3A what is the probability of negative profits? Use both the normal approximation and then confirm with a Monte Carlo simulation.
 
+Answer: Normal approxmation tell us the average profit $S/N$ has expected value $\mu=$`expectation` and standard deviation $\sigma=$
+
 ```{r}
 ## From 2A we have the expectation is
 N <- 1000
