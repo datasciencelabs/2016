@@ -310,10 +310,13 @@ cat("New interest rate is:", interest_rate2)
 
 At the interest rate calculated in 3A what is the probability of negative profits? Use both the normal approximation and then confirm with a Monte Carlo simulation.
 
-Answer: Normal approxmation tell us the average profit $S/N$ has expected value $\mu=$`expectation` and standard deviation $\sigma=$
+Answer: Normal approxmation tells us the average profit $S/N$ has expected value $\mu=$`expectation` and standard deviation $\sigma/\sqrt{N}$ with $\sigma=$ `(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2))`. So we compute
+
+$$\mbox{Pr}(S/N > 0) = \mbox{Pr}(\sqrt{N}*(S/N - \mu)/\sigma > -\sqrt{N}*\mu/\sigma)
+
 
 ```{r}
-## From 2A we have the expectation is
+## From 3A we have the expectation is
 N <- 1000
 loan <- 180000
 loss_per_foreclosure <- 120000
@@ -328,7 +331,12 @@ p2 <- 0.05
 interest_rate2 <- (expectation +
                      loss_per_foreclosure*p2)/(1-p2)/loan
 
-### Now lot's compute the profit
+## to compute normal approximation:
+mu  = expectation
+sigma = (interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2))
+pnorm(-sqrt(N)*mu/sigma)
+
+## Now confirm with Monte Carlo
 B <- 10^4
 profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate2*loan ), N, replace=TRUE, prob=c(p2, 1-p2))
@@ -346,25 +354,44 @@ From before
 
 $$ \sqrt{N}\frac{\mu}{\sigma} = z \mbox{ with } z= -\Phi^{-1}(0.001)$$
 
-which implies 
+which implies that with the new default probability  $p_2$ we have
 
-$$ \sqrt{N} = z \frac{(x + l) \sqrt{p(1-p) } }{ x (1-p) - l p } $$
+$$ \sqrt{N} = z \frac{(x + l) \sqrt{p_2(1-p_2) } }{ x (1-p_2) - l p_2 } $$
 
 ```{r}
+## From 3B we have the new interest rate is computed like this
+N <- 1000
+loan <- 180000
+loss_per_foreclosure <- 120000
+p <- 0.02
+z <- -qnorm(0.001)
+interest_rate <- loss_per_foreclosure*(z*sqrt(p*(1-p))+sqrt(N)*p)/
+  ((1-p)*sqrt(N) - z*sqrt(p*(1-p)))/loan
+
+expectation <- -loss_per_foreclosure*p + interest_rate*loan*(1-p)
+
+p2 <- 0.05
+interest_rate2 <- (expectation +
+                     loss_per_foreclosure*p2)/(1-p2)/loan
+
+
+## Now let's compute the new N
 z <- -qnorm(0.001)
 N2 <- (z*(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2)) / 
   (interest_rate2*loan*(1-p2) - loss_per_foreclosure*p2 ))^2
 cat("N is :",N2)
+
+### And confirm that the probability goes down to close to 0.001
 B <- 10^4
 profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate2*loan ), N2, replace=TRUE, prob=c(p2, 1-p2))
   sum(x)
 })
-mean(profit<0) ##should be about 0.001
+mean(profit<0) 
 
 ```
 
-So by doubling the number of loans we were able to reduce our risk! Now, for this to work, all the assumptions in our model need to be approximately correct, including the assumption that the probability of default was **independent**. This turned out to be false and the main reason for the under estimate of risk.
+So by increasing the number of loans we were able to reduce our risk! Now, for this to work, all the assumptions in our model need to be approximately correct, including the assumption that the probability of default was **independent**. This turned out to be false and the main reason for the under estimate of risk.
 
 
 ## Problem 3D
