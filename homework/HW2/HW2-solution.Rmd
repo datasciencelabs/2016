@@ -76,9 +76,9 @@ These are predicted with the central limit theorem that tells us $S_N$ is approx
 What is the expected value of our sampling model? What is the standard deviation of our sampling model?
 
 Answer:
-Expectation is $\mu = -1 \times (1-p) + 1\times p$ which is -1/19. The casino makes, on average, about 5 cents on each bet.
+Expectation is $\mu = -1 \times (1-p) + 1\times p$ which is -1/19. The casino makes, on average, about 5 cents on each bet. In general you can envision this as a box model with an infinite number of tickets (since you can imagine playing this game an infinite number of times) with a fraction $p = 18/38$ tickets labeled $1$ and $1-p = 20/38$ tickets labeled $-1$.
 
-Standard deviation is $\sigma = (1 - -1)\sqrt{(9/19)(10/19)}$ which is 0.998614.
+Standard deviation is $\sigma = |1 - -1|\sqrt{(9/19)(10/19)}$ which is 0.998614.
 
 
 
@@ -113,6 +113,7 @@ Ns <-seq(25, 1000, len=100)
 prob_of_casino_losing <- 1 - pnorm( sqrt(Ns)*(1/19/0.998614))
 plot(Ns, prob_of_casino_losing)
 ```
+Answer: Some of you did simulations to answer this question, but an quickly ran into computational issues with the large sample sizes. This is a perfect example of when an approximate answer is worth the error in approximation. This answer also probably gives you some idea of why casinos try to keep you at the table with free drinks!
 
 
 # Problem 2 
@@ -181,6 +182,8 @@ profit <- replicate(B, {
 })
 mean(profit/N) ##should be about 100
 ```
+
+Note: we'll try to ask you to verify things with a simulation but you'll start noticing that it's generally a good idea to do this to catch mistakes since simulations are quick and easy to write up. 
 
 
 ## Problem 2D
@@ -467,7 +470,9 @@ profit2 <- replicate(B,{
 ```
 
 Answer:
+
 Note that expected profits are about the same:
+
 ```{r}
 ## Without the added probabitiliy to induce correlation we get:
 B <- 10^5
@@ -482,6 +487,7 @@ mean(profit2)
 ```
 
 What is the probability of losing $1 million compared to the previous?
+
 ```{r}
 mean(profit < 0)
 mean(profit2 < 0)
@@ -500,3 +506,5 @@ mean(profit2 < -10^6)
 Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework help explain the conditions that led to the crisis.
 
 Example answer: If the creators of the securities assumed independence when computing the probability but the reality was that events were not independent, then they grossly underestimated the chances of losing money. This resulted in them selling securities at to low a price since the risk was much higher than what they calculated. This led to billions of dollars of losses once defaults started happening at a much higher rate than expected.
+
+Of course this was not the only reason for the underestimation of the risk, but we hope this gave you some idea of the types of analysis that could help explain things.
