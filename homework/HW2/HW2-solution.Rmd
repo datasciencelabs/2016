@@ -113,7 +113,7 @@ Ns <-seq(25, 1000, len=100)
 prob_of_casino_losing <- 1 - pnorm( sqrt(Ns)*(1/19/0.998614))
 plot(Ns, prob_of_casino_losing)
 ```
-Answer: Some of you did simulations to answer this question, but an quickly ran into computational issues with the large sample sizes. This is a perfect example of when an approximate answer is worth the error in approximation. This answer also probably gives you some idea of why casinos try to keep you at the table with free drinks!
+Answer: Some of you did simulations to answer this question, but an quickly ran into computational issues with the large sample sizes. This is a perfect example of when an approximate answer is worth the error in approximation. This answer also probably gives you some idea of why casinos try to keep you at the table for long periods of time with free drinks!
 
 
 # Problem 2 
