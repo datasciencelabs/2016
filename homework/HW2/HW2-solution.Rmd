@@ -234,7 +234,6 @@ Hint: See if the disparity is smaller for larger values of $p$. Also check for p
 
 ```{r}
 ##Note that the normal approximation is not that great at the tails
-par(mfrow=c(1,2))
 qqnorm(profit)
 qqline(profit)
 ```
