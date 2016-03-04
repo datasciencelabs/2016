@@ -10,7 +10,7 @@ output: html_document
 This homework is motivated by circumstances surrounding the [financial crisis of 2007-2008](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308). We title the homework _The Big Short_ because this is the title of a recent book about this topic that was recently made into a movie.
 
 Part of what caused the financial crisis was that the risk of certain [securities](https://en.wikipedia.org/wiki/Security_(finance)) sold by financial institutions were  underestimated. Specifically, 
-the risk of mortgage-backed securities (MBS) and collateralized debt obligations (CDO), whose price dependens on homeowners making their monthly payments, were grossly underestimated. A combination of factors resulted in many more defaults than were expected. This resulted in a crash of the prices of these securities. As a consequence, banks lost so much money that they needed bailouts to avoid default.
+the risk of mortgage-backed securities (MBS) and collateralized debt obligations (CDO), whose price dependents on homeowners making their monthly payments, were grossly underestimated. A combination of factors resulted in many more defaults than were expected. This resulted in a crash of the prices of these securities. As a consequence, banks lost so much money that they needed bailouts to avoid default.
 
 Here we present a **very** simplified version of what happened with some of these securities. Hopefully it will help you understand how a wrong assumption about statistical behavior of events can lead to substantial differences between what the model predicts and what actually happens. Specifically, we will see how using an independence assumption can result in misleading conclusions. Before we start with the specific application we ask you about a simple casino game.
 
@@ -310,7 +310,7 @@ cat("New interest rate is:", interest_rate2)
 
 At the interest rate calculated in 3A what is the probability of negative profits? Use both the normal approximation and then confirm with a Monte Carlo simulation.
 
-Answer: Normal approxmation tells us the average profit $S/N$ has expected value $\mu=$`expectation` and standard deviation $\sigma/\sqrt{N}$ with $\sigma=$ `(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2))`. So we compute
+Answer: Normal approximation tells us the average profit $S/N$ has expected value $\mu=$`expectation` and standard deviation $\sigma/\sqrt{N}$ with $\sigma=$ `(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2))`. So we compute
 
 $$\mbox{Pr}(S/N > 0) = \mbox{Pr}(\sqrt{N}*(S/N - \mu)/\sigma > -\sqrt{N}*\mu/\sigma)
 
@@ -436,6 +436,28 @@ sum( outcomes2[1,] < 0 & outcomes2[2,]<0)/sum(outcomes2[1,]<0)
 Generate a simulation with correlated outcomes such as those above. This time use the interest rate calculated in 3A. What is the expected earnings under this model compared to the previous?
 
 ```{r}
+### Compute the interest rate from 3A
+N <- 1000
+loan <- 180000
+loss_per_foreclosure <- 120000
+p <- 0.02
+z <- -qnorm(0.001)
+interest_rate <- loss_per_foreclosure*(z*sqrt(p*(1-p))+sqrt(N)*p)/
+  ((1-p)*sqrt(N) - z*sqrt(p*(1-p)))/loan
+
+## expectation per loan is therefore:
+expectation <- -loss_per_foreclosure*p + interest_rate*loan*(1-p)
+
+p2 <- 0.05
+interest_rate2 <- (expectation +
+                     loss_per_foreclosure*p2)/(1-p2)/loan
+## And the N we need to get the same low probability
+z <- -qnorm(0.001)
+N2 <- (z*(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2)) / 
+  (interest_rate2*loan*(1-p2) - loss_per_foreclosure*p2 ))^2
+
+
+## Now run the simulation using the code given above for correlated data
 B <- 10^5
 profit2 <- replicate(B,{
   add <- sample( c(-0.04,0.04), 1)
@@ -447,6 +469,14 @@ profit2 <- replicate(B,{
 Answer:
 Note that expected profits are about the same:
 ```{r}
+## Without the added probabitiliy to induce correlation we get:
+B <- 10^5
+profit <- replicate(B,{
+  add <- 0
+  x <- sample( c(-loss_per_foreclosure, interest_rate2*loan ), N2, replace=TRUE, prob=c(p2+add, 1-(p2+add)))
+  sum(x)
+})
+
 mean(profit)
 mean(profit2)
 ```
@@ -468,3 +498,5 @@ mean(profit2 < -10^6)
 ## Problem 4
 
 Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework help explain the conditions that led to the crisis.
+
+Example answer: If the creators of the securities assumed independence when computing the probability but the reality was that events were not independent, then they grossly underestimated the chances of losing money. This resulted in them selling securities at to low a price since the risk was much higher than what they calculated. This led to billions of dollars of losses once defaults started happening at a much higher rate than expected.
