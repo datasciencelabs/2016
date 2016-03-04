@@ -55,7 +55,9 @@ for(N in c(10, 25, 100, 1000)){
 
 ```{r}
 par(mfrow=c(2,2)) ##don't worry if you don't know what this is. You can remove it.
+## Try out a few N
 for(N in c(10, 25, 100, 1000)){
+  ## copy code from above:
   average_winnings <- replicate(B,get_outcome(N) ) / N
   z <- (average_winnings - mean(average_winnings))/mysd(average_winnings)
   qqnorm(z)
@@ -139,7 +141,9 @@ N <- 1000
 loss_per_foreclosure <- 120000
 p <- 0.02
 B <- 10^4
+## Use replicate to generate B random variables
 losses <- replicate(B, {
+  ## copy code from 2A
   defaults <- sample( c(0,1), N, prob=c(1-p, p), replace = TRUE) 
   sum(defaults * loss_per_foreclosure)
 })
@@ -169,7 +173,10 @@ interest_rate <- (100+p*loss_per_foreclosure)/(1-p)/loan
 cat("interest rate is: ",interest_rate)
 B <- 10000
 profit <- replicate(B, {
+  ## We add either a loss of -loss_per_foreclosure or gain of interest_rate*loan
+  ## with probabilities p and 1-p respectively for each of N loans
   x <- sample( c(-loss_per_foreclosure, interest_rate*loan ), N, replace=TRUE, prob=c(p, 1-p))
+  ## add gains and losses for total profit
   sum(x)
 })
 mean(profit/N) ##should be about 100
@@ -252,9 +259,11 @@ N <- 1000
 loan <- 180000
 p <- 0.02
 loss_per_foreclosure <- 120000
+z <- -qnorm(0.001)
 B <- 10^5
 ps <- seq(0.02,0.5,len=10)
 res <- sapply(ps,function(p){
+  ##same code as above but changing p and therefore the interest_rate:
   interest_rate <- loss_per_foreclosure*(z*sqrt(p*(1-p))+sqrt(N)*p)/
   ((1-p)*sqrt(N) - z*sqrt(p*(1-p)))/loan
   profit <- replicate(B, {
@@ -279,10 +288,22 @@ We were able to set interest rate of about 2% that guaranteed a very low probabi
 The pool of borrowers they found had a much higher default rate, estimated to be $p=0.05$. What interest rate would give these companies the same expected profit as your bank (Answer to 2E)? 
 
 ```{r}
+##From 2E
+N <- 1000
+loan <- 180000
+loss_per_foreclosure <- 120000
+p <- 0.02
+z <- -qnorm(0.001)
+interest_rate <- loss_per_foreclosure*(z*sqrt(p*(1-p))+sqrt(N)*p)/
+  ((1-p)*sqrt(N) - z*sqrt(p*(1-p)))/loan
+
+## expectation per loan is therefore:
+expectation <- -loss_per_foreclosure*p + interest_rate*loan*(1-p)
+
 p2 <- 0.05
 interest_rate2 <- (expectation +
                      loss_per_foreclosure*p2)/(1-p2)/loan
-interest_rate2
+cat("New interest rate is:", interest_rate2)
 ```
 
 ## Problem 3B 
@@ -290,17 +311,28 @@ interest_rate2
 At the interest rate calculated in 3A what is the probability of negative profits? Use both the normal approximation and then confirm with a Monte Carlo simulation.
 
 ```{r}
+## From 2A we have the expectation is
+N <- 1000
 loan <- 180000
 loss_per_foreclosure <- 120000
+p <- 0.02
+z <- -qnorm(0.001)
+interest_rate <- loss_per_foreclosure*(z*sqrt(p*(1-p))+sqrt(N)*p)/
+  ((1-p)*sqrt(N) - z*sqrt(p*(1-p)))/loan
+
+expectation <- -loss_per_foreclosure*p + interest_rate*loan*(1-p)
+
 p2 <- 0.05
 interest_rate2 <- (expectation +
                      loss_per_foreclosure*p2)/(1-p2)/loan
+
+### Now lot's compute the profit
 B <- 10^4
 profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate2*loan ), N, replace=TRUE, prob=c(p2, 1-p2))
   sum(x)
 })
-mean(profit<0) ##should be about 0.001
+mean(profit<0) 
 ```
 
 ## Problem 3C 
