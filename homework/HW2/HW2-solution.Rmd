@@ -312,7 +312,7 @@ At the interest rate calculated in 3A what is the probability of negative profit
 
 Answer: Normal approximation tells us the average profit $S/N$ has expected value $\mu=$`expectation` and standard deviation $\sigma/\sqrt{N}$ with $\sigma=$ `(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2))`. So we compute
 
-$$\mbox{Pr}(S/N > 0) = \mbox{Pr}\left(\sqrt{N}(S/N - \mu)/\sigma > -\sqrt{N}\mu/\sigma\right) = \mbox{Pr}(Z>-\sqrt{N}\mu/\sigma\right)$$
+$$\mbox{Pr}(S/N > 0) = \mbox{Pr}\left(\sqrt{N}(S/N - \mu)/\sigma > -\sqrt{N}\mu/\sigma\right) = \mbox{Pr}\left(Z>-\sqrt{N}\mu/\sigma\right)$$
 
 
 ```{r}
