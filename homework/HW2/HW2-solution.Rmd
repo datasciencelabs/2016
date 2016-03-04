@@ -54,6 +54,7 @@ for(N in c(10, 25, 100, 1000)){
 ```
 
 ```{r}
+par(mfrow=c(2,2)) ##don't worry if you don't know what this is. You can remove it.
 for(N in c(10, 25, 100, 1000)){
   average_winnings <- replicate(B,get_outcome(N) ) / N
   z <- (average_winnings - mean(average_winnings))/mysd(average_winnings)
@@ -73,7 +74,7 @@ These are predicted with the central limit theorem that tells us $S_N$ is approx
 What is the expected value of our sampling model? What is the standard deviation of our sampling model?
 
 Answer:
-Expectation is $\mu = -1 \times (1-p) + 1\times p$ which is -1/19 or about 5 cents. 
+Expectation is $\mu = -1 \times (1-p) + 1\times p$ which is -1/19. The casino makes, on average, about 5 cents on each bet.
 
 Standard deviation is $\sigma = (1 - -1)\sqrt{(9/19)(10/19)}$ which is 0.998614.
 
@@ -134,12 +135,13 @@ sum(defaults * loss_per_foreclosure)
 Note that the loss you will incur is a random variable. Use Monte Carlo simulation to estimate the distribution of this random variable. Use summaries and visualization to describe your potential losses to your board of trustees.
 
 ```{r}
-B <- 10000
+B <- 10^4
 losses <- replicate(B, {
   defaults <- sample( c(0,1), N, prob=c(1-p, p), replace = TRUE) 
   sum(defaults * loss_per_foreclosure)
 })
 hist(losses)
+par(mfrow=c(1,2))
 qqnorm(losses)
 qqline(losses)
 mean(losses)
@@ -159,6 +161,7 @@ loan <- 180000
 p <- 0.02
 loss_per_foreclosure <- 120000
 interest_rate <- (100+p*loss_per_foreclosure)/(1-p)/loan
+cat("interest rate is: ",interest_rate)
 B <- 10000
 profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate*loan ), N, replace=TRUE, prob=c(p, 1-p))
@@ -212,10 +215,10 @@ z <- -qnorm(0.001)
 loss_per_foreclosure <- 120000
 interest_rate <- loss_per_foreclosure*(z*sqrt(p*(1-p))+sqrt(N)*p)/
   ((1-p)*sqrt(N) - z*sqrt(p*(1-p)))/loan
-
+cat("Interest rate is: ", interest_rate,"\n")
 expectation <- -loss_per_foreclosure*p + interest_rate*loan*(1-p)
 cat("Mean profit:" , expectation*N )
-B <- 10^4
+B <- 10^5
 profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate*loan ), N, replace=TRUE, prob=c(p, 1-p))
   sum(x)
@@ -231,6 +234,7 @@ Hint: See if the disparity is smaller for larger values of $p$. Also check for p
 
 ```{r}
 ##Note that the normal approximation is not that great at the tails
+par(mfrow=c(1,2))
 qqnorm(profit)
 qqline(profit)
 ```
@@ -266,7 +270,7 @@ The pool of borrowers they found had a much higher default rate, estimated to be
 p2 <- 0.05
 interest_rate2 <- (expectation +
                      loss_per_foreclosure*p2)/(1-p2)/loan
-0.04502308
+interest_rate2
 ```
 
 ## Problem 3B 
@@ -304,7 +308,7 @@ $$ \sqrt{N} = z \frac{(x + l) \sqrt{p(1-p) } }{ x (1-p) - l p } $$
 z <- -qnorm(0.001)
 N2 <- (z*(interest_rate2*loan + loss_per_foreclosure)*sqrt(p2*(1-p2)) / 
   (interest_rate2*loan*(1-p2) - loss_per_foreclosure*p2 ))^2
-
+cat("N is :",N2)
 B <- 10^4
 profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate2*loan ), N2, replace=TRUE, prob=c(p2, 1-p2))
@@ -368,7 +372,7 @@ profit2 <- replicate(B,{
 ```
 
 Answer:
-Note that expected profits are the same:
+Note that expected profits are about the same:
 ```{r}
 mean(profit)
 mean(profit2)
