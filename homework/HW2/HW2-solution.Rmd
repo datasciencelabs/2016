@@ -215,6 +215,7 @@ The interest rate is $x/180000$.
 
 Confirm with a Monte Carlo simulation:
 ```{r}
+N <- 1000
 loan <- 180000
 p <- 0.02
 z <- -qnorm(0.001)
@@ -229,16 +230,17 @@ profit <- replicate(B, {
   x <- sample( c(-loss_per_foreclosure, interest_rate*loan ), N, replace=TRUE, prob=c(p, 1-p))
   sum(x)
 })
-mean(profit<0) ##should be about 0.001
+mean(profit<0) 
 ```
 
 ## Problem 2F
 
-Note that the Monte Carlo simulation gave a slightly higher probability that 0.001. What is a possible reason for this? 
+Note that the Monte Carlo simulation gave a slightly higher probability than 0.001. What is a possible reason for this? 
 Hint: See if the disparity is smaller for larger values of $p$. Also check for probabilities larger than 0.001. Recall we made an assumptions when we calculated the interest rate.
 
 
 ```{r}
+## Run script from 2E
 ##Note that the normal approximation is not that great at the tails
 qqnorm(profit)
 qqline(profit)
