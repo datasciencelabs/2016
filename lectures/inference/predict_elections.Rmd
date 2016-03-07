@@ -119,11 +119,12 @@ What should $\mu$ be? What about $\tau$?
 
 **Your answer here**:
 
+
 Now, let's assume we are part of the republican party and we 
 passionately believe that McCain will beat Obama. To quantify 
 this belief, we can say the distribution of $\theta$
 is normal with mean $\mu = -0.15$ and standard deviation
-$\tau = 0.10$.
+$\tau = 5$.
 
 #### Assessment 
 Under your prior belief that McCain will beat Obama, 
@@ -200,26 +201,27 @@ We have learned that in the context of estimating the difference
 in the polls between two presidentical candidates, we can use the 
 Central Limit Theorem (CLT) to model $\varepsilon$. According to the CLT,
 
-$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{2\sqrt{\theta (1-\theta)}}{\sqrt{n}}\right) $$
+$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{2\sqrt{p (1-p)}}{\sqrt{n}}\right) $$
 
-where $n$ is the poll size from a single poll. This means statistical
+where $p$ is the prorportion for Obama, $n$ is the poll size from a single 
+poll. This means statistical
 theory tells us the expected value of $\varepsilon$ is 0 and the 
 standard deviation $\sigma$ should be given by
-$\frac{2\sqrt{\theta (1-\theta)}}{\sqrt{n}}$. 
+$\frac{2\sqrt{p (1-p)}}{\sqrt{n}}$. 
 
-Remember, if $\theta$ represented the percentage for just one 
+Remember, if $p$ represented the percentage for just one 
 candidate (e.g. Obama), the statitical theory tells us that the 
 standard error for the estimate of the percentage for Obama is 
 
-$$ \frac{\sqrt{\theta (1-\theta)}}{\sqrt{n}} $$
+$$ \frac{\sqrt{p (1-p)}}{\sqrt{n}} $$
 
 But if we are estimating the difference in percentages between two 
 candidates, then the estimate is approximated by 
-$\hat{\theta} - (1-\hat{\theta}) = 2\hat{\theta} - 1$. 
-This implies that the standard error is $2 \sqrt{ \theta (1 - \theta)} / \sqrt{n}$.
+$\hat{\theta} = \hat{p} - (1-\hat{p}) = 2\hat{p} - 1$. 
+This implies that the standard error is $2 \sqrt{ p (1 - p)} / \sqrt{n}$.
 
 Because each $Y_i$ a separate poll then the standard deviation of 
-$\varepsilon$ should be about $2 \sqrt{ \theta (1 - \theta) }/ \sqrt{n}$:
+$\varepsilon$ should be about $2 \sqrt{ p (1 - p) }/ \sqrt{n}$:
 
 **Note, this theory is extremely useful when we just have one poll.**
 
@@ -318,8 +320,9 @@ approach to estimate the standard deviation $\sigma$.
 #### Assessment
 
 Based on our sampling distribution, 
-what is the chance that Obama will beat 
-McCain in the 2008 presidential election? 
+what is the probability our interval includes the 
+true difference between Obama and McCain in 
+the 2008 presidential election? 
 
 ```{r}
 ##Your code here
@@ -348,12 +351,12 @@ If you recall above, we discussed how use the statistical
 theory from the Central Limit Theorem (CLT) to estimate 
 $\sigma$. According to the CLT, 
 
-$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{2\sqrt{\theta (1-\theta)}}{\sqrt{n}}\right) $$
+$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{2\sqrt{p (1-p)}}{\sqrt{n}}\right) $$
 
 where $n$ is the poll size. This means statistical
 theory tells us the expected value of $\varepsilon$ is 0 and the 
 standard deviation $\sigma$ should be given by
-$\frac{2\sqrt{\theta (1-\theta)}}{\sqrt{n}}$.
+$\frac{2\sqrt{p (1-p)}}{\sqrt{n}}$.
 
 #### Assessment 
 Use the poll data above (i.e. polls within 5 weeks of the 
@@ -431,8 +434,19 @@ know if the trend will continue. More useful is
 to model it as a random effect with its variance 
 depending on days left to the election (e.g. a model 
 with a decreasing variance as the weeks get closer 
-to the election. Note that we also want to 
-assume $w$ is an auto-correlated process. 
+to the election.
+
+To incorporate information about the time effect, 
+we an use the fact that we see the variance 
+in the difference between Obama and McCain decreases 
+as we get closer to election night.  
+
+If we are 10 weeks away from election night, you can get an
+idea of the standard deviation of $w_t$ by looking at 10 weeks prior on
+previous elections. In previous elections we observe $\theta$ so we
+can actually observe $w_t$ + $\varepsilon$. We can 
+observe the this for several weeks and
+notice that it gets smaller and smaller as the election gets closer.
 
 
 #### 2. House effect 
@@ -469,7 +483,7 @@ an assumption about the expected value of $p_j$
 pollster specific effects to have different variances. 
 To estimate these we can use previous election data. 
 With these in place, we can construct weighted estimates
-for $\theta$ that down-weight bad pollsters. 
+for $\theta$ that better estimate the variablity. 
 
 
 #### 3. General biases
@@ -556,13 +570,13 @@ This a histogram of these results.
 First, let's simulate data from the posterior distribution for one observation. 
 Keep in mind, we are simulating the difference between Obama and McCain.
 ```{r}
-## Will discuss in class.
+## Will discuss in class. 
 
 ```
 
 Next, let's simulate data from the posterior distribution for $N$ observations. 
 ```{r}
-## Will discuss in class.
+## Will discuss in class. 
 
 ```
 
@@ -571,7 +585,7 @@ is centered at `mu_post`. We can count the number of times Obama beat
 McCain from our observations generated from the posterior distribution. 
 
 ```{r}
-## Will discuss in class.
+## Will discuss in class. 
 
 ```
 
@@ -579,7 +593,7 @@ Now let's put it all together in a Monte Carlo simuation to generate
 election results. 
 
 ```{r}
-## Will discuss in class.
+## Will discuss in class. 
 
 ```
 
