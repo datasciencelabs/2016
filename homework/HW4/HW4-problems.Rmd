@@ -24,7 +24,7 @@ You can see tables that are available when you load this package by typing
 ```
 
 
-# Problem 1 (70% of grade)
+# Problem 1 (80% of grade)
 
 Statistics have been used in baseball since its beginnings. Note that `Lahman` goes back to the 19th century. Batting average, for example, has been used to summarize a batter's success for decades. [Other statistics](http://mlb.mlb.com/stats/league_leaders.jsp) such as home runs, runs batted in (RBI) and stolen bases have been reported and players rewarded for high numbers. However, until [Bill James](https://en.wikipedia.org/wiki/Bill_James) introduced [sabermetrics](https://en.wikipedia.org/wiki/Sabermetrics), careful analyses had not been done to determine if these statistics actually help a team win. To simplify the exercise we will focus on scoring runs and ignore pitching and fielding. 
 
@@ -200,7 +200,7 @@ For each of the BB, singles, extra bases, home runs and stolen bases per game ho
 ## your code here
 ```
 
-# Problem 3 (10% of grade)
+# Problem 3 (Bonus)
 
 Now we are going to build a baseball team for the 2002 season. We get to pick one of each of the 9 batting positions DH, C, 1B, 2B, 3B, SS, CF and two outfielders (OF, LF, or RF). We will pick players active in 2002 but you will have to pay each player whatever their maximum salary was during their entire career. You have a total of $50 million. Show us your team and how many runs you think they will produce. Note the number of runs per games of the best teams:
 
