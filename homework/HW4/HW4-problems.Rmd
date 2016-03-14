@@ -206,7 +206,7 @@ Now we are going to build a baseball team for the 2002 season. We get to pick on
 
 ```{r}
 Teams %>%
-  filter(yearID == 2012, lgID == "AL") %>%
+  filter(yearID == 2002, lgID == "AL") %>%
   mutate(runs_per_game = R / G) %>%
   select(teamID, W, L, runs_per_game) %>%
   arrange(desc(W))
