@@ -1,0 +1,496 @@
+---
+title: "Regression"
+output: html_document
+---
+
+# Regression
+
+## Correlation
+
+We have focused on the analysis of _univariate_ variables. However, in data science applications it 
+common to be interested in the relationship
+between two or more variables. We saw this in our baseball example in which we are interested in the relationship, for example, between Bases on Balls and Runs. We will come back to this example, but here we present one of the first datasets from which regression was born.
+
+We examine an example from Genetics. Specifically the father/son
+height data used by [Francis Galton](https://en.wikipedia.org/wiki/Francis_Galton) to
+understand heredity. 
+
+```{r}
+data(father.son,package="UsingR")
+```
+
+If we were to summarize these data, we could use
+the two averages and two standard deviations since both distributions are
+well approximated by the normal distribution. 
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+father.son %>% select(fheight, sheight) %>% 
+  summarize(mean(fheight), sd(fheight), mean(sheight), sd(sheight))
+```
+
+This summary, however,
+fails to describe an important characteristic of the data. 
+
+```{r scatterplot, fig.cap="Heights of father and son pairs plotted against each other."}
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+father.son %>% ggplot(aes(fheight, sheight)) + geom_point() +
+  xlab("Father's height in inches") + ylab("Son's height in inches")
+```
+
+The scatter plot shows a general trend: the taller the father, the
+taller the son. A summary of this trend is the correlation coefficient,
+which in this cases is:
+
+```{r}
+father.son %>% summarize(cor(fheight, sheight))
+```
+
+The correlation of a list of pairs $(x_1, y_1), \dots , (x_n, y_n)$ is defined as
+
+$$\rho = \frac{1}{n} \sum_{i=1}^n \left( \frac{x_i-\mu_x}{\sigma_x} \right)\left( \frac{y_i-\mu_y}{\sigma_y} \right)
+$$
+
+with $\mu_x, \mu_y$ the average of $x$ and $y$ respectively and $\sigma_x, \sigma_y$ the standard deviation as previously defined. To see why this equation relates to how $x$ and $y$ move together, note that the two terms being multiplied are the SDs away from the mean for each list. If both quantities are always above the mean or below the mean together, we are adding up positive numbers. If they are independent then they average out to 0, and if they move in opposite directions we are averaging negative numbers. 
+
+Note that the correlation needs to be between -1 and 1. To see this, consider that we can't have higher correlation than when we compare a list to itself (perfect correlation), in which case the correlation is
+
+$$\rho = \frac{1}{n} \sum_{i=1}^n \left( \frac{x_i-\mu_x}{\sigma_x} \right)^2 = 1/\sigma^2 
+\frac{1}{n} \sum_{i=1}^n \left( x_i-\mu_x \right)^2 = 1$$
+
+Here are six examples:
+
+```{r, echo=FALSE}
+n <- 250
+cors <- c(-0.9,-0.5,0,0.5,0.9,0.99)
+dat <- lapply(cors,function(r) MASS::mvrnorm(n,c(0,0), matrix(c(1,r,r,1),2,2)))
+dat <- Reduce(rbind, dat)
+dat <- cbind( rep(cors, each=n), dat)
+colnames(dat) <- c("r","x","y")
+as.data.frame(dat) %>% ggplot(aes(x,y)) +facet_wrap(~r) + geom_point() +geom_vline(xintercept = 0,lty=2) + geom_hline(yintercept = 0,lty=2) 
+```
+
+However, note that correlation is not always a good summary of the relationship between two variables. The following four artificial datasets, referred to as Anscombe's quartet all have a correlation of 0.82:
+
+```{r ,echo=FALSE}
+library(tidyr)
+anscombe %>% mutate(row = seq_len(n())) %>%
+  gather(name, value, -row) %>% 
+  separate(name, c("axis", "group"), sep=1) %>%
+  spread(axis, value) %>% select(-row) %>%
+  ggplot(aes(x,y)) +
+  facet_wrap(~group)  +
+  geom_smooth(method="lm", fill=NA, fullrange=TRUE, color="blue") +
+  geom_point(bg="orange",color="red",cex=3,pch=21)
+```
+
+We will motivate the correlation summary statistic by trying to
+predict the son's height using the father's height. This will help us understand when correlation is appropriate as a summary statistic. 
+
+## Sample Correlation is a Random Variable
+
+In most data science application we do not observe the population but rather a sample. As with the average and standard deviation, the sample correlation is most commonly used estimate of the correlation. 
+
+As in illustration let's assume that the 1,078 pairs of fathers and sons is our entire population. A less fortunate geneticists can only afford to take random sample of 25 pairs:
+
+The following is a random variable.
+```{r}
+R <- sample_n( father.son, 100) %>% summarize(cor(fheight, sheight))
+```
+
+###Assessment: 
+
+Use a Monte Carlo simulation to learn the distribution of the difference between `R` and the actual correlation. What is the SE of `R`? What is the distribution?
+
+###Assessment
+
+Re-do the assessment when the sample size is 250 instead of 25?
+
+
+## Stratification
+
+Suppose we are asked to guess the height of randomly select sons. The
+average height, 68.7 inches, is the value with the highest proportion
+(see histogram) and would be our prediction. But what if we are told
+that the father is 72 inches tall, do we sill guess 68.7? 
+
+The father is taller than average. Specifically, he is 1.75
+standard deviations taller than the average father. So should we
+predict that the son is also 1.75 standard deviations taller? It turns
+out that this would be an overestimate. To see this, we look at all the sons
+with fathers who are about 72 inches. We do this by _stratifying_ the
+father heights. We call this a conditional average since we are computing the average son height _conditioned_ on the father being 72 inches tall:
+
+```{r boxplot, fig.cap="Boxplot of son heights stratified by father heights.", fig.width=10.5, fig.height=5.25}
+father.son %>% mutate(fheight=factor(round(fheight))) %>% ggplot(aes(fheight, sheight)) + geom_boxplot() + xlab("Father's height") + ylab("Son's height")
+
+conditional_avg <- father.son %>% mutate(fheight=round(fheight)) %>% 
+  group_by(fheight) %>% filter(n() > 10) %>%
+  summarize(avg = mean(sheight)) 
+
+conditional_avg %>% filter(fheight==72)
+```
+
+
+Stratification followed by boxplots lets us see the distribution of
+each group. The average height of sons with fathers that are 72 inches
+tall is 70.7 inches. We also see that the *means* of the strata appear
+to follow a straight line (remember the middle line in the boxplot
+shows the median, not the mean). 
+
+
+```{r scatterplot2, fig.cap="Heights of father and son pairs plotted against each other."}
+father.son %>% ggplot(aes(fheight, sheight)) + geom_point(color="grey") +
+  geom_point(data=conditional_avg, aes(fheight, avg), color="red", cex=3) +
+  xlab("Father's height in inches") + ylab("Son's height in inches") 
+```
+
+This red points above are close to the *regression line*. The regression line tells us that for every standard deviation $\sigma_x$ increase above the average $mu_x$, $y$ grows $\rho$ standard deviations $\sigma_y$ above the average $\mu_y$:
+
+$$ \left( \frac{y_i-\mu_y}{\sigma_y} \right) = \rho \left( \frac{x_i-\mu_x}{\sigma_x} \right)$$
+
+If there is perfect correlation, we predict the same number of SDs. If there is 0 correlation, then we don't use $x$ at all.  For values between 0 and 1, the prediction is somewhere in between. For negative values, we simply predict in the opposite direction.
+
+Note that if we write the above in the form $y=b+mx$, this line has slope 
+
+$$m = \rho \frac{\sigma_y}{\sigma_x} \mbox{ and intercept } b=\mu_y - m \mu_x$$
+
+
+Notice that if we first standardize the variables, then the regression line has intercept 0 and slope $r$. Let's add the line to the figure above
+```{r}
+mu_x <- mean(father.son$fheight)
+mu_y <- mean(father.son$sheight)
+s_x <- sd(father.son$fheight)
+s_y <- sd(father.son$sheight)
+r <- cor(father.son$fheight, father.son$sheight)
+m <-  r * s_y / s_x
+
+father.son %>% 
+  mutate(fheight = scale(fheight), sheight = scale(sheight)) %>%
+  ggplot(aes(fheight, sheight)) + 
+  geom_point(color="grey") +
+  xlab("Father's height in standard units") + 
+  ylab("Son's height in standard units") +
+  geom_abline(intercept = 0, slope = r , col="blue") +
+  geom_abline(intercept = 0, slope = 1, lty=2)
+```
+
+The line is close the conditional averages: 
+
+```{r}
+father.son %>% 
+  ggplot(aes(fheight, sheight)) + 
+  geom_point(color="grey") +
+  geom_point(data=conditional_avg, aes(fheight, avg), color="red", cex=3) +
+  xlab("Father's height in inches") + 
+  ylab("Son's height in inches") +
+  geom_abline(intercept = mu_y - m*mu_x, slope = m , col="blue")
+```
+
+
+## Bivariate Normal Distribution 
+
+Correlation is a widely used summary statistic but it is often misused or misinterpreted. The main way we motivate the use of correlation involves the bivariate normal distribution. When a pair of random variables $(X,Y)$ is approximated by bivariate normal scatter plots look like ovals. They can be thin (high correlation) or circle-shaped (no correlation). We saw some of these above:
+
+ 
+```{r}
+n <- 250
+cors <- c(-0.9,-0.5,0,0.5,0.9,0.99)
+dat <- lapply(cors,function(r) MASS::mvrnorm(n,c(0,0), matrix(c(1,r,r,1),2,2)))
+dat <- Reduce(rbind, dat)
+dat <- cbind( rep(cors, each=n), dat)
+colnames(dat) <- c("r","x","y")
+as.data.frame(dat) %>% ggplot(aes(x,y)) +facet_wrap(~r) + geom_point() +geom_vline(xintercept = 0,lty=2) + geom_hline(yintercept = 0,lty=2) 
+```
+
+
+A more technical way to define the bivariate normal distribution is the following: if $X$ is normal, $Y$ is  normal, and for any stratum of $X$, say $X=x$, $Y$ is approximately normal in that stratum, then the pair is approximately bivariate normal. When we fix $X=x$ in this way we then refer to the _conditional distribution_ of $Y$ given $X=x$. We write it like notation like this:
+
+$$ f_{Y \mid X=x} \mbox{ is the conditional distribution and } \mbox{E}(Y \mid X=x) \mbox{ is the conditional expected value.}$$
+
+If we think the height data is well approximated by the bivariate normal distribution then we should see the normal approximation hold for each strata:
+
+```{r qqnorm_of_strata, fig.cap="qqplots of son heights for four strata defined by father heights.",fig.width=7.5,fig.height=7.5}
+
+father.son %>% 
+  mutate(fheight = round(fheight)) %>%
+  filter(fheight%in% 66:71) %>%
+  ggplot() + facet_wrap(~fheight) + stat_qq(aes(sample=sheight)) +
+  ylab("Son's height in inches")
+```
+
+
+Now we come back to defining correlation. Mathematical statistics tells us that when two variables follow a bivariate normal distribution, then for any given value of $x$, the expected value of the $Y$ in pairs for which $X=x$ is:
+
+$$ 
+\mbox{E}(Y | X=x) = \mu_Y +  \rho \frac{X-\mu_X}{\sigma_X}\sigma_Y
+$$
+
+Note that this is a line with slope 
+
+$$\rho \frac{\sigma_Y}{\sigma_X}$$. 
+
+And therefore, the above is the same as the _regression line_ we saw earlier.
+
+$$
+\frac{\mbox{E}(Y \mid X=x)  - \mu_Y}{\sigma_Y} = \rho \frac{x-\mu_X}{\sigma_X}
+$$
+
+
+
+#### Variance explained
+
+The standard deviation of the _conditional_ distribution described above is:
+
+$$
+\mbox{Var}(Y \mid X=x ) \sqrt{1-\rho^2} \sigma_y
+$$
+
+This is where statements like $X$ explains $\rho^2 \times 100$ % of the variation in $Y$: the variance of $Y$ is $\sigma^2$ and, once we condition, it goes down to $(1-\rho^2) \sigma^2_Y$ . It is important to remember that the "variance explained" statement only makes sense when the data is approximated by a bivariate normal distribution.
+
+
+
+## Linear Models
+
+If data is bivariate normal then the regression line equation can be derived. Therefore that the conditional expectation is a line is not an assumption but rather a derived result. However, in practice it is common to explicitly write down a model that describes the relationship between two or more variables using a _linear model_. "Linear" here does not refer to lines, but rather to linear combinations. We will see examples below.
+
+As we learn about linear models, we need to remember that we are still working with random variables. This means that the estimates we obtain using linear models are also random variables. Although the mathematics is more complex, the concepts we learned with polls here. We begin with some exercises to review the concept of random variables in the context of linear models.
+
+
+
+#### Father & son heights
+
+We already saw this picture:
+
+```{r galton_data, fig.cap="Galton's data. Son heights versus father heights."}
+data(father.son,package="UsingR")
+father.son %>% ggplot(aes(fheight, sheight)) + geom_point() +
+  xlab("Father's height in inches") + ylab("Son's height in inches")
+```
+
+Instead of assuming bivariate normality we simply note that 
+the sons' heights do seem to increase linearly with the fathers' heights. In this case, a model that describes the data is as follows:
+
+$$ Y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, i=1,\dots,N $$
+
+Here we assume $x_i$ is the fixed father's height and $Y_i$ is the random son's height which deviates from the father's height by regression to the mean determined by $\beta_1$ and random variability coming from $\varepsilon$. This makes sense as there are other variables not in the model, for example, mothers' heights, genetic randomness, and environmental factors.
+
+Note that we can also model the father's height with son's height:
+
+$$ X_i = \gamma_0 + \gamma_1 y_i + \delta, i=1,\dots,N $$
+
+A few important observations:
+
+1. We use $\gamma$ instead of $\beta$ and $\delta$ instead of $\epislon$ because this is a different model. We can't solve the first equation to get the second because $\varepsilon$ is a random variable. 
+
+Note that the regression lines are different:
+
+```{r}
+library(gridExtra)
+LIM <- range(father.son)
+g1 <- father.son %>%  ggplot(aes(fheight, sheight)) + geom_point() + geom_smooth(method = "lm", se = FALSE) + 
+  xlab("Fahter's Height") + ylab("Son's Height") +
+  geom_abline(intercept = 0, slope = 1) +
+  scale_y_continuous(limits = LIM) +  scale_x_continuous(limits = LIM) 
+g2 <- father.son %>%  ggplot(aes(sheight, fheight)) + geom_point() + geom_smooth(method = "lm", se = FALSE) + 
+  ylab("Fahter's Height") + xlab("Son's Height") +
+  geom_abline(intercept = 0, slope = 1) +
+  scale_y_continuous(limits = LIM) +  scale_x_continuous(limits = LIM) 
+grid.arrange(g1, g2, nrow = 1)
+```
+
+
+2. In the first model we have a sense of causality. Inheriting the father's height genes affects the son's height. In the second model we don't have this. However, the model can still be useful approximation and provide, for example, prediction of the son's height if we know the father's. 
+
+This serves as warning that _correlation is not causation_. The right plot above could be incorrectly interpreted as the son's height affects the fathers, but this would be reversing cause and effect.
+
+
+#### Falling objects
+
+Imagine you are Galileo in the 16th century trying to describe the velocity of a falling object. An assistant climbs the Tower of Pisa and drops a ball, while several other assistants record the position at different times. Let's simulate some data using the equations we know today and adding some measurement error:
+
+```{r}
+set.seed(1)
+g <- 9.8 ##meters per second
+n <- 25
+tt <- seq(0,3.4,len=n) ##time in secs, note: we use tt because t is a base function
+d <- 56.67  - 0.5*g*tt^2
+y <- d  + rnorm(n,sd=1) ##meters
+falling_object <- data.frame(time = tt, distance = d, observed_distance = y)
+```
+
+The assistants hand the data to Galileo and this is what he sees:
+
+```{r gravity, fig.cap="Simulated data for distance travelled versus time of falling object measured with error."}
+falling_object %>% ggplot(aes(time, observed_distance)) + geom_point() + ylab("Distance in meters") + xlab("Time in seconds")
+```
+
+He does not know the exact equation, but by looking at the plot above he deduces that the position should follow a parabola. So he models the data with:
+
+$$ Y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon_i, i=1,\dots,n $$
+
+With $Y_i$ representing location, $x_i$ representing the time, and $\varepsilon$ accounting for measurement error. This is a linear model because it is a linear combination of known quantities (th $x$ s) referred to as predictors or covariates and unknown parameters (the $\beta$ s). 
+
+#### Linear models in general
+
+We have seen three very different examples in which linear models can be used. A general model that encompasses all of the above examples is the following:
+
+$$ Y_i = \beta_0 + \beta_1 x_{i,1} + \beta_2 x_{i,2} + \dots +  \beta_2 x_{i,p} + \varepsilon_i, i=1,\dots,n $$
+
+ 
+$$ Y_i = \beta_0 + \sum_{j=1}^p \beta_j x_{i,j} + \varepsilon_i, i=1,\dots,n $$
+
+Note that we have a general number of predictors $p$. Matrix algebra provides a compact language and mathematical framework to compute and make derivations with any linear model that fit into the above framework.
+
+<a name="estimates"></a>
+
+#### Estimating parameters
+
+For the models above to be useful we have to estimate the unknown $\beta$ s. In the first example, we want to describe a physical process for which we can't have unknown parameters. In the second example, we better understand inheritance by estimating how much, on average, the father's height affects the son's height. 
+
+The standard approach in science is to find the values that minimize the distance of the fitted model to the data. The following is called the least squares (LS) equation and we will see it often in this chapter:
+
+$$ \sum_{i=1}^n \left\{  Y_i - \left(\beta_0 + \sum_{j=1}^p \beta_j x_{i,j}\right)\right\}^2 $$
+
+Once we find the minimum, we will call the values the least squares estimates (LSE) and denote them with $\hat{\beta}$. The quantity obtained when evaluating the least square equation at the estimates is called the residual sum of squares (RSS). Since all these quantities depend on $Y$, *they are random variables*. The $\hat{\beta}$ s are random variables and we will eventually perform inference on them.
+
+#### Falling object example revisited
+Thanks to my high school physics teacher, I know that the equation for the trajectory of a falling object is: 
+
+$$d = h_0 + v_0 t -  0.5 \times 9.8 t^2$$
+
+with $h_0$ and $v_0$ the starting height and velocity respectively. The data we simulated above followed this equation and added measurement error to simulate `n` observations for dropping the ball $(v_0=0)$ from the tower of Pisa $(h_0=56.67)$. This is why we used this code to simulate data:
+
+```{r simulate_drop_data}
+set.seed(1)
+g <- 9.8 ##meters per second
+n <- 25
+tt <- seq(0,3.4,len=n) ##time in secs, note: we use tt because t is a base function
+d <- 56.67  - 0.5*g*tt^2
+y <- d  + rnorm(n,sd=1) ##meters
+falling_object <- data.frame(time = tt, distance = d, observed_distance = y)
+```
+
+Here is what the data looks like with the solid line representing the true trajectory:
+
+```{r simulate_drop_data_with_fit, fig.cap="Fitted model for simulated data for distance travelled versus time of falling object measured with error."}
+falling_object %>% ggplot(aes(time, observed_distance)) + geom_point() + geom_line(aes(time, distance), col="blue")
+```
+
+But we were pretending to be Galileo and so we don't know the parameters in the model. The data does suggest it is a parabola, so we model it as such:
+
+$$ Y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon, i=1,\dots,n $$
+
+How do we find the LSE?
+
+#### The least squares estimate (LSE)
+
+Let's write a function that computes the RSS for any vector $\beta$:
+```{r}
+rss <- function(beta2, beta0, beta1, data){
+  resid <- data$observed_distance - (beta0+beta1*data$time+beta2*data$time^2)
+  return(sum(resid^2))
+}
+```
+
+So for any three dimensional vector we get an RSS. Here is a plot of the RSS as a function of $\beta_2$ when we keep the other two fixed. We try out several $\beta_2$ values but just two pairs for $\beta_0$ and $\beta_1$.
+
+```{r rss_versus_estimate, fig.cap="Residual sum of squares obtained for several values of the parameters."}
+beta2s = seq(-10,0,len=nrow(falling_object))
+tab <- data.frame(beta2=beta2s, 
+           rss = sapply(beta2s, rss, beta0=57, beta1=0,
+                        data=falling_object))
+tab$rss2 <- sapply(beta2s, rss, beta0=45, beta1=0.5, data=falling_object)
+tab %>% ggplot(aes(beta2, rss)) + geom_line() + 
+  geom_line(aes(beta2, rss2), col=2)
+```
+
+Trial and error here is not going to work. Instead, we can use calculus: take the partial derivatives, set them to 0 and solve. Of course, if we have many parameters, these equations can get rather complex. Linear algebra provides a compact and general way of solving this problem. 
+
+#### The `lm` function
+
+In R we can fit this model by simply using the `lm` function. We will describe this function in detail later, but here is a preview:
+
+```{r}
+fit <- falling_object %>% mutate(time_sq = time^2) %>% lm(y~time+time_sq, data=.)
+summary(fit)$coef
+```
+
+It gives us the LSE, as well as standard errors and p-values. 
+
+Part of what we do in this section is to explain the mathematics behind this function. 
+
+#### Assessment
+
+Because there is measurement error, your estimate of the gravity constant is a random variable. Run a Monte Carlo simulation in which new measurement errors are recorded in the falling object experiment. What is the distribution and SE of the random
+
+
+## HR and Runs
+
+Let's Use the data in the `Team` table to explore the relationship between HR and runs per game in 1999. Let's make a plot to see if perhaps HR predicts runs.
+
+```{r}
+library(Lahman)
+library(broom)
+
+dat <- Teams %>%
+  filter(yearID == 1999) %>%
+  mutate(R = R / G, HR = HR / G) 
+dat %>%  ggplot(aes(HR, R)) + 
+  geom_point() 
+```
+
+If we believe there is somewhat of a trend the simplest model we can fit is:
+
+$$R_i = \beta_0 + \beta_1 HR_i + \varepsilon_i$$
+
+with $i$ representing team. We can fit this model to estimate $\beta_1$ and find that in fact there is a positive correlation:
+
+```{r}
+fit <- dat %>%
+  lm(R ~ HR, data = .) 
+dat %>%  ggplot(aes(HR, R)) + 
+  geom_point() +
+  geom_abline(intercept = fit$coef[1],
+              slope = fit$coef[2])
+print(fit$coefficients[2])
+```
+
+But remember this estimate is a random variable. If we consider every year a new sample from the population of HR, Runs pairs, we can study our estimates variability using this:
+
+
+```{r}
+res <- Teams %>% filter(yearID >= 1961) %>%
+  mutate(R = R / G, HR = HR / G) %>%
+  group_by(yearID) %>%
+  do(tidy(lm(R ~ HR, data = .))) %>%
+  filter(term == "HR")
+
+### ThE SE is:
+sd(res$estimate)
+##The CI is
+mean(res$estimate) + c(-1,1)*qnorm(0.975)*sd(res$estimate)
+hist(res$estimate)
+qqnorm(res$estimate)
+qqline(res$estimate)
+```
+
+## CLT for regression
+Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval. Use the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. What are your thoughts now on the effectiveness of recruiting players that can steal bases?
+
+```{r}
+fit <- dat  %>%
+  lm(R ~ HR, data = .) 
+
+# either
+res <- tidy(fit, conf.int = TRUE)
+res %>%
+  filter(term == "HR")
+
+# or
+res <- summary(fit)
+res$coef[2,1] + c(-1,1)*qnorm(0.975)*res$coef[2,2]
+```
+
+
+

@@ -1,0 +1,139 @@
+---
+title: "Baseball"
+output: html_document
+fontsize: 12pt
+---
+
+# Regression
+
+## Motivating Example: Money Ball
+
+_Moneyball: The Art of Winning an Unfair Game_ is a book by Michael Lewis about the Oakland Athletics baseball team and its general manager, the person tasked with building the team, Billy Beane. During Billy Bean's tenure as general manager, ownership cut the budget drastically leaving the general manager with one of the lowest payrolls in baseball. Money Ball tells the story of how Billy Bean used analysts to find inefficiencies in the market. Specifically, his team used data science to find low cost players that the data predicted would help the team win. In this lab we will go back to 2002 and try to build a baseball team with a limited budget. Note that the Yankees $125,928,583 payroll more than tripled the Oakland A's $39,679,746  [budget](http://www.baseballchronology.com/Baseball/Years/2002/Payroll.asp).
+
+Statistics have been used in baseball since its beginnings. Note that the dataset we will be using, included in the `Lahman` library, goes back to the 19th century. Batting average, for example, has been used to summarize a batter's success for decades. [Other statistics](http://mlb.mlb.com/stats/league_leaders.jsp) such as home runs, runs batted in (RBI) and stolen bases have been reported and players rewarded for high numbers. However, until [Bill James](https://en.wikipedia.org/wiki/Bill_James) introduced [sabermetrics](https://en.wikipedia.org/wiki/Sabermetrics), careful analyses had not been done to determine if these statistics actually help a team win. To simplify the exercise we will focus on scoring runs and ignore pitching and fielding. 
+
+<img src="http://cdn.fansided.com/wp-content/blogs.dir/17/files/2011/12/bill-james-079006079.jpg">
+
+
+We will see how regression analysis can help develop strategies to build a competitive baseball team with a constraint budget. The approach can be divided into two separate data analysis. In the first we determine which recorded player-specific statistics predict runs. In the second we examine if players were undervalued based on what our first analysis predicts. 
+
+### Baseball Basics
+
+We actually don't need to understand all the details about the game of baseball, which has over 100 rules, to use Money Ball for motivation. Here we distill the problem down to the basic knowledge ones need to attack the data science problem. 
+
+The goal of a baseball game is to score more runs (points) than the other team. Each team has 9 batters that bat in a predetermined order. After the 9th batter hits, we start with the first again. Each time they come to bat we call it a plate appearance (PA). At each PA, the other team's _pitcher_ throws that ball and you try to hit it. The PA ends with an binary outcome: you either make an _out_ (failure) and sit back down or you don't (success) and you get to run around the bases. Each team gets nine tries to score runs referred to as _innings_ and each inning ends after three outs.
+
+Here  is a [success](https://www.youtube.com/watch?v=HL-XjMCPfio) and here is a [failure](https://www.youtube.com/watch?v=NeloljCx-1g). From the vidoes we see how luck is involved in the process. 
+
+Now there are several ways to succeed. Understanding this distinction will be important for our analysis. When you hit the ball you want to pass as many _bases_ as possible. There are four bases with the fourth one called _home plate_ which is where you start as well.
+
+<img src="http://quarterlyspeedbump.com/wp-content/uploads/2012/03/Baseball_Diamond1.jpeg">
+
+If you get home you score a run. We are simplifying a bit but the ways you can succeed (not make an out) are the following: 
+
+- Bases on balls (BB) - the pitcher does not pitch well so you got to first base.
+- Single - You hit the ball and get to first base.
+- Double (X2B) - You hit the ball and get to second base
+- Triple  (X3B) - You hit the ball and get to third base
+- Home Run (HR) - You hit the ball and go home and score a run. [Here](https://www.youtube.com/watch?v=xYxSZJ9GZ-w) is an example.
+  
+ If you get to a base, you still have the chance of getting home and scoring a run if the next batter hits successfully. While you are _on base_ you can also try to steal a base (SB). If you run fast enough you can go try to go first to second without the other team tagging you. [Here](https://www.youtube.com/watch?v=JSE5kfxkzfk) is a stolen base.
+ 
+### Why were BB undervalued?
+ 
+Of the five ways to be successful listed above the last four are considered hits (H). Historically, the batting average has been considered the most important offensive statistic. 
+
+<img src="http://i0.wp.com/mopupduty.com/wp-content/uploads/2010/09/JumboTron.jpg">
+
+This is defined as hits divided by at bats (AB). An AB is the number of times you either get a hit or make an out.  This implies that PA is approximately BB+AB.
+
+One of Bill James first important insights is that statistics such as the batting average ignore BB. But a BB is success. So a player that gets many more BB than the average might not be noticed if he does not excel in batting average. But how good is this player at producing runs? In contrast stolen bases were considered important. This seems arbitrary. Can we use data science to determine if it's better to pay for BB or SB? 
+
+### Base on Ball or Stolen bases?
+
+One of the challenges in this analysis is that it is not obvious how to determine if a player produces run because so much depends on his teammates. We keep track of the number of runs scored by a player. But note that if you hit after someone who hits many HR you will score a lot. But these runs don't necessarily happen if we hire this player but not his HR hitting teammate. However, we can examine team-level statistics. How do teams with many SB compare to teams with few? How about BB? We have data! Let's examine some. 
+
+Let's start with an obvious one: HR. Do teams that hit more home runs score more runs?e
+```{r, message=FALSE, warning=FALSE}
+library(Lahman)
+library(dplyr)
+library(ggplot2)
+library(broom)
+theme_set(theme_bw(base_size = 16))
+
+Teams %>% filter(yearID %in% 1961:2001 ) %>%
+  mutate(R_per_game = R / G, HR_per_game = HR / G) %>%
+  ggplot(aes(HR_per_game, R_per_game)) + geom_point()
+```
+
+```{r, fig.width=10, fig.height=5}
+library(gridExtra)
+tab <- Teams %>% filter(yearID %in% 1961:2001 ) %>%
+  mutate(R_per_game = R / G, SB_per_game = SB / G, BB_per_game = BB/G)
+
+g1 <- tab %>%  ggplot(aes(SB_per_game, R_per_game)) + geom_point()
+g2 <- tab %>%  ggplot(aes(BB_per_game, R_per_game)) + geom_point()
+grid.arrange(g1, g2, nrow = 1)
+```
+
+But wait, association is not causation. In fact, it looks like home run hitters get more BB:
+
+```{r}
+Batting %>% filter(yearID %in% 1961:2001) %>% group_by(playerID) %>%
+  summarize(HR_tot=sum(HR), BB_tot=sum(BB), PA = sum(BB+AB)) %>%
+  mutate(HR_per_PA = HR_tot/PA, BB_per_PA=BB_tot/PA) %>%
+  filter(PA >1000) %>%
+  ggplot(aes(HR_per_PA, BB_per_PA)) + geom_point()
+```
+
+Linear regression will help us parse all this out and help us determine what players to recruit.
+
+
+
+
+  
+ 
+ 
+ 
+
+
+<!--
+After three outs then the other team gets to hit. 
+### Baseball
+
+<img src="http://quarterlyspeedbump.com/wp-content/uploads/2012/03/Baseball_Diamond1.jpeg">
+
+### Statistics
+<img src="http://i0.wp.com/mopupduty.com/wp-content/uploads/2010/09/JumboTron.jpg">
+
+### Sabermetrics
+
+<img src="http://cdn.fansided.com/wp-content/blogs.dir/17/files/2011/12/bill-james-079006079.jpg">
+
+###Bill James 
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Bill_James_2010.jpg">"
+### Some Terms
+
+- R - Runs
+- AB - At bats
+- SO - Strike out
+- H - Hitter puts the ball in play and is not out
+- 2B - Hitter gets to second
+- 3B - Hitter gets to third
+- HR - Home Run, hitter scores a run
+- BB - Base on balls
+- PA - Plate apperances $\approx$ AB+BB
+
+-->
+
+
+
+
+
+
+
+
+
+
+
