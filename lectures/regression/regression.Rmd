@@ -8,7 +8,7 @@ output: html_document
 ## Correlation
 
 We have focused on the analysis of _univariate_ variables. However, in data science applications it 
-common to be interested in the relationship
+is common to be interested in the relationship
 between two or more variables. We saw this in our baseball example in which we are interested in the relationship, for example, between Bases on Balls and Runs. We will come back to this example, but here we present one of the first datasets from which regression was born.
 
 We examine an example from Genetics. Specifically the father/son
@@ -102,9 +102,25 @@ R <- sample_n( father.son, 100) %>% summarize(cor(fheight, sheight))
 
 Use a Monte Carlo simulation to learn the distribution of the difference between `R` and the actual correlation. What is the SE of `R`? What is the distribution?
 
-###Assessment
+Solution
+```{r}
+B <- 1000
+N <- 1000
+r <- cor(father.son$fheight, father.son$sheight)
+Rs <- replicate(B, 
+                sample_n( father.son, N, replace=TRUE) %>%
+                  summarize(r=cor(fheight, sheight)) %>%
+              .$r
+          )
 
-Re-do the assessment when the sample size is 250 instead of 25?
+dat <- data.frame(R = Rs - r)
+ggplot(dat, aes(R)) + geom_histogram()
+ggplot(dat) + stat_qq(aes(sample=scale(R))) + 
+                        geom_abline(intercept = 0, slope = 1)
+dat %>% summarize(sd(R))
+```
+
+Assessment: Re-do the assessment when the sample size is 250 instead of 25?
 
 
 ## Stratification
@@ -425,6 +441,25 @@ Part of what we do in this section is to explain the mathematics behind this fun
 Because there is measurement error, your estimate of the gravity constant is a random variable. Run a Monte Carlo simulation in which new measurement errors are recorded in the falling object experiment. What is the distribution and SE of the random
 
 
+```{r simulate_drop_data_monte_carlo}
+g <- 9.8 ##meters per second
+n <- 25
+tt <- seq(0,3.4,len=n) ##time in secs, note: we use tt because t is a base function
+d <- 56.67  - 0.5*g*tt^2
+y <- d  + rnorm(n,sd=1) ##meters
+B <- 1000
+g_hats <- replicate(B, {
+  y <- d  + rnorm(n,sd=1) 
+  fit <- data.frame(time = tt, time_sq = tt^2, observed_distance = y) %>%
+    lm(y~time+time_sq, data=.)
+  -2*summary(fit)$coef[3]
+})
+hist(g_hats)
+qqnorm(scale(g_hats))
+abline(0,1)
+sd(g_hats)
+```
+
 ## HR and Runs
 
 Let's Use the data in the `Team` table to explore the relationship between HR and runs per game in 1999. Let's make a plot to see if perhaps HR predicts runs.
@@ -466,17 +501,21 @@ res <- Teams %>% filter(yearID >= 1961) %>%
   do(tidy(lm(R ~ HR, data = .))) %>%
   filter(term == "HR")
 
-### ThE SE is:
-sd(res$estimate)
-##The CI is
-mean(res$estimate) + c(-1,1)*qnorm(0.975)*sd(res$estimate)
+###Data looks approximately normal 
 hist(res$estimate)
 qqnorm(res$estimate)
 qqline(res$estimate)
+###The SE is:
+sd(res$estimate)
+##So the CI is
+mean(res$estimate) + c(-1,1)*qnorm(0.975)*sd(res$estimate)
 ```
 
-## CLT for regression
-Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval. Use the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. What are your thoughts now on the effectiveness of recruiting players that can steal bases?
+## CLT or t-distribution approximation for regression
+
+Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval.If we believe the error term is normally distributed then there is a version of the t-distribution approximationUse the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. 
+
+What are your thoughts now on the effectiveness of recruiting players that can steal bases?
 
 ```{r}
 fit <- dat  %>%
@@ -489,7 +528,7 @@ res %>%
 
 # or
 res <- summary(fit)
-res$coef[2,1] + c(-1,1)*qnorm(0.975)*res$coef[2,2]
+res$coef[2,1] + c(-1,1)*qt(0.975)*res$coef[2,2]
 ```
 
 
