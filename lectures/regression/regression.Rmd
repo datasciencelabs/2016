@@ -513,7 +513,7 @@ mean(res$estimate) + c(-1,1)*qnorm(0.975)*sd(res$estimate)
 
 ## CLT or t-distribution approximation for regression
 
-Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval.If we believe the error term is normally distributed then there is a version of the t-distribution approximationUse the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. 
+Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval. If we believe the error term is normally distributed then there is a version of the t-distribution approximation. Use the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. 
 
 What are your thoughts now on the effectiveness of recruiting players that can steal bases?
 
@@ -528,7 +528,8 @@ res %>%
 
 # or
 res <- summary(fit)
-res$coef[2,1] + c(-1,1)*qt(0.975)*res$coef[2,2]
+df <- nrow(dat) - nrow(res$coef)
+res$coef[2,1] + c(-1,1)*qt(0.975, df=df)*res$coef[2,2]
 ```
 
 
