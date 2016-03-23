@@ -61,10 +61,6 @@ arrange(dat, `2013`) %>% select(-playerID)
 
 Miguel Cabrera hit 348 in 2013. Use linear regression to predict his 2014 average. Use the `broom` package to get a prediction for all players. In general how does the prediction for 2014 compare to the 2013 performance? 
 
-```{r}
-fit <- dat %>% do(augment(lm(`2014`~`2013`, data=.), data=.))
-select(fit, nameFirst, nameLast, X2013, .fitted, X2014) %>% arrange(desc(X2013)) %>% tbl_df
-```
 
 ## Regression Fallacy 
 
@@ -144,10 +140,6 @@ We can't perform this analysis on a single year, because there are not enough te
 
 Start by creating a data set with R, BB and HR for every team from 1961 to today. What is the correlation between each of the three pairs.
 
-```{r}
-Teams %>%  filter(yearID >= 1961 & G==162) %>% 
-  summarize(cor(R,BB), cor(R,HR), cor(BB,HR))
-```
 
 #### Assessment 
 
@@ -156,11 +148,6 @@ Consider only teams from 1961 and beyond.
 
 Compare to the coefficient when we don't stratify.
 
-```{r}
-my_data <- Teams %>%  filter(yearID >= 1961 & G==162 & HR %in% 125:130)
-my_data %>% ggplot(aes(BB,R)) + geom_point() + geom_smooth(method = "lm")
-my_data %>% lm(R ~ BB, data = .) %>% tidy(conf.int = TRUE)
-```
 
 #### Assessment
 
@@ -178,27 +165,23 @@ table(group)
 You this idea to make a scatter plot of R versus BB for 10 HR strata. Hint: use `facet_wrap`
 
 ```{r}
-my_data <- Teams %>%  filter(yearID >= 1961 & G==162) %>%
-  mutate(group = cut(HR, quantile(HR, prob = seq(0,1,.1)), include.lowest=TRUE))
-my_data %>%
-  ggplot(aes(BB, R)) + 
-  geom_point() + 
-  geom_smooth(method = "lm") + 
-  facet_wrap(~group)
 ```
 
 #### Assessment
 
 While the BB effect was certainly lower than before we controlled for HR, but it appears to be there. To check more formally we can fit a linear model to each strata.
 
-```{r}
-res <- my_data %>% group_by(group) %>%
-  do(tidy(lm(R ~ BB, data = .))) %>% ungroup
-```
 
 Note that the intercept increases linearly and that the BB effect seems about constant:
 
 ```{r}
+my_data <- Teams %>%  filter(yearID >= 1961 & G==162 & HR %in% 125:130)
+my_data <- Teams %>%  filter(yearID >= 1961 & G==162) %>%
+  mutate(group = cut(HR, quantile(HR, prob = seq(0,1,.1)), include.lowest=TRUE))
+
+res <- my_data %>% group_by(group) %>%
+  do(tidy(lm(R ~ BB, data = .))) %>% ungroup
+
 res %>% select( group, term, estimate, std.error) %>%
   filter(term=="BB") %>% 
   ggplot(aes(group, estimate, 
