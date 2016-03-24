@@ -175,7 +175,7 @@ While the BB effect was certainly lower than before we controlled for HR, but it
 Note that the intercept increases linearly and that the BB effect seems about constant:
 
 ```{r}
-my_data <- Teams %>%  filter(yearID >= 1961 & G==162 & HR %in% 125:130)
+my_data <- Teams %>%  filter(yearID >= 1961 & G==162 & HR %in% 120:130)
 my_data <- Teams %>%  filter(yearID >= 1961 & G==162) %>%
   mutate(group = cut(HR, quantile(HR, prob = seq(0,1,.1)), include.lowest=TRUE))
 
