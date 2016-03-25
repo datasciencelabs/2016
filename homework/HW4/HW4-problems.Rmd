@@ -39,7 +39,7 @@ Use the data in the `Team` table to explore the relationship between stolen base
 
 ## Problem 1B
 
-In Problem 1A we observed a positive relationship between scoring runs and stealing bases. However, the estimated coefficient is a random variable. Their is chance involved in scoring run. So how do we know if this observed relationship was not just chance variability?
+In Problem 1A we observed a positive relationship between scoring runs and stealing bases. However, the estimated coefficient is a random variable. There is chance involved in scoring runs. So how do we know if this observed relationship was not just chance variability?
 
 To examine the variability of this random variable we will consider each year to be a new independent outcome. Use the `lm` and `do` functions to fit a linear model to each year since 1961 (when they started playing 162 games per year). Hint: use the function `tidy` in `broom` to process the regression in each group so that it can be recombined (see [here](https://cran.r-project.org/web/packages/broom/vignettes/broom_and_dplyr.html) for examples).
 
@@ -178,7 +178,7 @@ Use the `lm` function to fit a linear model to the 1999 data. Use the log-transf
 
 Did the Oakland A's outperform during the Money Ball era? Notice that after Oakland's original success, other teams started implementing their approach. If in fact they were over-performing then they were winning more than predicted by the regression model.
 
-Fit a linear model to the wins versus standardized data for each year. Then plot the residuals for Oakland. Make the same plot for the Boston Red Sox. (Hint: use the `augment` function from broom on each linear fit object to extract the residuals- look at the documentation for `augment.lm`). What do year do you think Oakland started using data science and when did other teams catch up? 
+Fit a linear model to the data for each year. Then plot the residuals for Oakland. Make the same plot for the Boston Red Sox. (Hint: use the `augment` function from broom on each linear fit object to extract the residuals- look at the documentation for `augment.lm`). What do year do you think Oakland started using data science and when did other teams catch up? 
 
 ```{r}
 ## your code here
