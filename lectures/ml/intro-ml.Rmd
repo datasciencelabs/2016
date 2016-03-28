@@ -43,7 +43,7 @@ tmp <- data.frame(outcome=rep("Y_",n),
 tmp %>% kable
 ```
 
-#### Assessment
+#### Assessment 1: http://goo.gl/forms/jcrVC3vWjT
 
 For each of the following determine if the outcome is continuos or categorical
 
@@ -87,7 +87,7 @@ tmp %>% ggplot(aes(Row, Column, fill=value)) +
     facet_grid(.~label)
 ```
 
-#### Assessment:
+#### Assessment 2: http://goo.gl/forms/HFWju4Ux2a
 
 How many features are availalbe to us for prediction?
 
@@ -133,7 +133,7 @@ $$
 \mbox{E}\{ (\hat{Y} - Y)^2  \mid  X=x \}
 $$ 
 
-#### Assessment
+#### Assessment 3: http://goo.gl/forms/NQD3X54EdK
 
 For the father and son heights round each father height to the nearest intenger to form a predictor:
 
@@ -175,7 +175,7 @@ father.son %>% ggplot(aes(fheight, sheight)) + geom_point() +
 ```
 
 
-#### Assessment
+#### Assessment 4: http://goo.gl/forms/Pf8bcPVUsN
 
 1. What is the prediction rule to predict son's height from father's height? Hint: We know that the regression line provides and estimate of $\mbox{E}\left( Y \mid X=x\right)$.
 
@@ -247,7 +247,7 @@ $$
 \mbox{Pr}( Y = 1 | X=x) 
 $$
 
-#### Assessment
+#### Assessment 5: http://goo.gl/forms/eqwKLzuwZF
 
 Define the following predictor
 
@@ -312,7 +312,7 @@ An extension that permits us to continue using regression-like models is to appl
 
 $$ g(p) = \log \frac{p}{1-p}$$
 
-#### Assessment
+#### Assessment 6: http://goo.gl/forms/v7uUpdYzyH
 
 Remake the plot from the previous assessment but this time, 
 split the heights into 10 groups by quantiles,
@@ -526,7 +526,7 @@ fit <-  glm(y~X_1+X_2, data=train_set, family="binomial")
 ```
 
 
-#### Assessment
+#### Assessment 7: http://goo.gl/forms/Gha03PIwoS
 
 What type of function is the border between calling 0s and 1s? Hint: what kind of fucntions solves this
 
@@ -558,15 +558,8 @@ conf_matrix$overall["Accuracy"]
 ```
 
 
-#### Assessment
+#### Assessment 8: http://goo.gl/forms/qCfP1fIZEq
 
 Can we use the empirical bayes approach here? Why or what not?
 If we do, notice we have to model the joint distributions
 $f_{X_1,X_2 \mid Y=1}$ and $f_{X_1,X_2 \mid Y=1}$. How may total parameters would this involve if we used the bivariate normal distribution?
-
-
-
-    
-
-
-
