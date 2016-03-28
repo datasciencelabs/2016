@@ -215,7 +215,7 @@ dat <- mutate(dat,height=gsub("ft","'",height) ) %>%
 dat %>% slice(1:5) %>% kable
 ```
 
-#### Asssessment
+#### Assessment 4.5: http://goo.gl/forms/TQrDLkfYNM
 
 Create a predictor by rounding the heights to the nearest inch. What is the conditional probability of being Male if you are 70 inches tall?
 
