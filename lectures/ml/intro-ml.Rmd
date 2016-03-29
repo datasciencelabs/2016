@@ -43,7 +43,7 @@ tmp <- data.frame(outcome=rep("Y_",n),
 tmp %>% kable
 ```
 
-#### Assessment 1: http://goo.gl/forms/jcrVC3vWjT
+#### Assessment
 
 For each of the following determine if the outcome is continuos or categorical
 
@@ -87,7 +87,7 @@ tmp %>% ggplot(aes(Row, Column, fill=value)) +
     facet_grid(.~label)
 ```
 
-#### Assessment 2: http://goo.gl/forms/HFWju4Ux2a
+#### Assessment:
 
 How many features are availalbe to us for prediction?
 
@@ -133,7 +133,7 @@ $$
 \mbox{E}\{ (\hat{Y} - Y)^2  \mid  X=x \}
 $$ 
 
-#### Assessment 3: http://goo.gl/forms/NQD3X54EdK
+#### Assessment
 
 For the father and son heights round each father height to the nearest intenger to form a predictor:
 
@@ -178,7 +178,7 @@ father.son %>% ggplot(aes(fheight, sheight)) + geom_point() +
 ```
 
 
-#### Assessment 4: http://goo.gl/forms/Pf8bcPVUsN
+#### Assessment
 
 1. What is the prediction rule to predict son's height from father's height? Hint: We know that the regression line provides and estimate of $\mbox{E}\left( Y \mid X=x\right)$.
 
@@ -232,7 +232,7 @@ dat <- mutate(dat,height=gsub("ft","'",height) ) %>%
 dat %>% slice(1:5) %>% kable
 ```
 
-#### Assessment 4.5: http://goo.gl/forms/TQrDLkfYNM
+#### Asssessment
 
 Create a predictor by rounding the heights to the nearest inch. What is the conditional probability of being Male if you are 70 inches tall?
 
@@ -264,7 +264,7 @@ $$
 \mbox{Pr}( Y = 1 | X=x) 
 $$
 
-#### Assessment 5: http://goo.gl/forms/eqwKLzuwZF
+#### Assessment
 
 Define the following predictor
 
@@ -329,7 +329,7 @@ An extension that permits us to continue using regression-like models is to appl
 
 $$ g(p) = \log \frac{p}{1-p}$$
 
-#### Assessment 6: http://goo.gl/forms/v7uUpdYzyH
+#### Assessment
 
 Remake the plot from the previous assessment but this time, 
 split the heights into 10 groups by quantiles,
@@ -552,7 +552,7 @@ fit <-  glm(y~X_1+X_2, data=train_set, family="binomial")
 ```
 
 
-#### Assessment 7: http://goo.gl/forms/Gha03PIwoS
+#### Assessment
 
 What type of function is the border between calling 0s and 1s? Hint: what kind of fucntions solves this
 
@@ -584,8 +584,15 @@ conf_matrix$overall["Accuracy"]
 ```
 
 
-#### Assessment 8: http://goo.gl/forms/qCfP1fIZEq
+#### Assessment
 
 Can we use the empirical bayes approach here? Why or what not?
 If we do, notice we have to model the joint distributions
 $f_{X_1,X_2 \mid Y=1}$ and $f_{X_1,X_2 \mid Y=1}$. How may total parameters would this involve if we used the bivariate normal distribution?
+
+
+
+    
+
+
+
