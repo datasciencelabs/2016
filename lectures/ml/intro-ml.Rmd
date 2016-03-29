@@ -62,7 +62,7 @@ Let's consider an example. The first thing that happens to letter when they are 
 
 Originally humans had to sort these but today, thanks to machine learning algorithms, a computer can read zip codes. What are the outcomes and features? Here are three images of written digits. These have already been read by a human and assigned an outcome $y$: 
 ```{r, echo=FALSE, cache=TRUE}
-url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits.csv"
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
 digits <- read_csv(url)
 tmp <- lapply( c(1,4,5), function(i){
     expand.grid(Row=1:28, Column=1:28) %>%  
@@ -451,7 +451,7 @@ In the two simple examples above we only had one predictor. We actually do not c
 First lets filter to include only 2 and 7s:
 ```{r}
 if(!exists("digits")){
-  url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits.csv"
+  url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
 digits <- read_csv(url)
 }
 dat27 <- digits %>% filter(label%in%c(2,7))
