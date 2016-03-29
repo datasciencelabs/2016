@@ -144,6 +144,9 @@ X <- round(father.son$fheight)
 
 What is you prediction for son's height when $X=66$? Hint: use conditional expectation
 
+```{r}
+father.son %>% filter(round(fheight)==66) %>% summarize(mean(sheight))
+```
 
 ## Regression as Prediction
 
@@ -179,9 +182,23 @@ father.son %>% ggplot(aes(fheight, sheight)) + geom_point() +
 
 1. What is the prediction rule to predict son's height from father's height? Hint: We know that the regression line provides and estimate of $\mbox{E}\left( Y \mid X=x\right)$.
 
+Answer: The above implies the following prediction function:
+
+$$ \hat{Y} = f(x) =  \bar{Y} + r \frac{s_y}{s_x}(x - \bar{X}) $$
+
+or 
+
+$$ \hat{Y} = f(x) =  69 + 0.5 (x - 68) $$
+
+We also actual know what what the expected loss will be because it is the standard error:
+
+$$
+\sqrt{1 - r^2}s_y = 2.44
+$$
 
 2. What is the prediction rule to predict father's height from son's height?
 
+$$ \hat{Y} = f(x) =  68 + 0.5 (x - 69) $$
 
 ## Regression for a binary outcome
 
@@ -232,7 +249,7 @@ To mimic an actual machine learning challenge. We will act as if we don't know t
 set.seed(5)
 trainIndex <- sample(rep(c(TRUE, FALSE),c(nrow(dat)-30,30)))
 dat <- mutate(dat, train = trainIndex) 
-```
+x````
 
 We will evaluate our approach by applying our algorithm to the test set and, only after applying the model, we will peek at the outcome and build a confusion matrix. 
 
@@ -318,6 +335,15 @@ Remake the plot from the previous assessment but this time,
 split the heights into 10 groups by quantiles,
 plot $g(f_hat)$. To avoid infinities, convert 1 to 0.99 and 0 to 0.01 and remove $X>70$
 
+```{r}
+dat %>% mutate(y = ifelse(gender=="Male", 1,0), 
+                X=round(height)) %>% 
+  filter(X<=70) %>%
+  group_by(X) %>% summarize(f_hat=mean(y)) %>%
+  mutate(ifelse(f_hat==1, 0.99, f_hat)) %>%
+  mutate(ifelse(f_hat==0, 0.01, f_hat)) %>%
+  qplot(X,log(f_hat/(1-f_hat)), data=.)
+```
 
 This logistic transformation converts probability to log odds. Odds are how much more likely something will happen compared to not happening. So $p=0.5$ means the odds are 1 to 1 and the log odds 0. If $p=0.75$ the odds are 3 to 1. A nice characteristic of this transformation is that transforms probabilities to be symmetric around 0:
 
@@ -512,7 +538,7 @@ We can visualize the training data now using color to denote the classes:
 
 ```{r}
 train_set %>% ggplot(aes(X_1, X_2, fill = label)) +
-  geom_point(pch=21,cex=2) 
+  geom_point(pch=21,cex=5) 
 ```
 
 Let's try logistic regression. The model is simply:
