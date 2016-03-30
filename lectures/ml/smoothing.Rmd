@@ -225,10 +225,10 @@ p <- ggplot(dat2, aes(X, Y)) +
   geom_smooth(aes(group = center, frame = center, weight = weight), method = "lm", se = FALSE) +
   geom_vline(aes(xintercept = center, frame = center), lty = 2) +
   geom_point(shape = 1, data = dat, alpha = .5,cex=5) +
-  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE), data = loess_fit, color = "red") +
+  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE), data = loess_fit, color = "red",lwd=1.5) +
   ggtitle("x0 = ")
 
-gg_animate(p, "loess.gif", ani.width = 1050, ani.height = 700, interval=0.15)
+gg_animate(p, "loess.gif", ani.width = 1050, ani.height = 525, interval=0.15)
 
 ```
 
@@ -585,17 +585,17 @@ res <- train(label ~ .,
 plot(res)
 ```
 
-With k=51 we obtain what appears to be a decent estimate of the true $f$.
+With k=11 we obtain what appears to be a decent estimate of the true $f$.
 
 ```{r, echo=FALSE, fig.width=10.5,fig.height=5.25, fig.align="center" }
 knn_fit <- knn3(y~.,data = select(train_set, y, X_1, X_2),
-                k=51)
+                k=11)
 f_hat <- predict(knn_fit, newdata = true_f)[,2]
 
 g1 <- true_f %>%
   ggplot(aes(X_1, X_2, fill=f))  +
   scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D")) + geom_raster()  + guides(fill=FALSE) +  
-  stat_contour(aes(x=X_1,y=X_2,z=f_hat),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
+  stat_contour(aes(x=X_1,y=X_2,z=f),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
 
 g2 <- true_f %>% mutate(f_hat = f_hat) %>%
   ggplot(aes(X_1, X_2, fill=f_hat))  +
@@ -609,13 +609,13 @@ grid.arrange(g1,g2, nrow=1)
 An important part of data science is visualizing results to determine why we are succeeding and why we are failing.
 
 ```{r, echo=FALSE}
-f_hat <- predict(knn_fit, newdata = test_set, k=51)[,2]
+f_hat <- predict(knn_fit, newdata = test_set, k=11)[,2]
 
 high_prob_and_correct_2 <- which(f_hat<0.02 &
                                test_set$label=="2")[1:5]
 high_prob_and_incorrect_2 <- which(f_hat<0.2 &
                                    test_set$label=="7")[1:5]
-low_prob <-  which(abs(f_hat-0.5)<0.02)[1:5] 
+low_prob <-  which(abs(f_hat-0.5)<0.05)[1:5] 
 high_prob_and_incorrect_7 <- which(f_hat>0.75 &
                                    test_set$label=="2")[1:5]
 high_prob_and_correct_7 <- which(f_hat>0.98 &
