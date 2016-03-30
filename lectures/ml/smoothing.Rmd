@@ -469,6 +469,7 @@ K-nearest neighbors (kNN) is similar to bin smoothing, but it is easier to adapt
 Let's use our logistic regression as a straw man:
 
 ```{r}
+library(caret)
 glm_fit <- glm(y~.,data = select(train_set, y, X_1, X_2) )
 f_hat <- predict(glm_fit, newdata = test_set, 
                  type = "response")
