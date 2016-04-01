@@ -1,0 +1,415 @@
+---
+title: "Allies and Enemies"
+output: html_document
+---
+
+**This homework is due Sunday April 10, 2016 at 11:59PM EST. When complete, submit your code in an R Markdown file and the knitted HTML via GitHub.**
+
+# Introduction 
+
+The United Nations (UN) is an intergovernmental organization 
+founded in 1946 to promote international cooperation. It now 
+represents 193 member states. The General Assembly is the largest 
+body, with a seat for every member of the UN. It discusses 
+topics of international importance such as maintaining peace 
+and security, providing humanitarian aid, and protecting human rights. 
+
+We will be analyzing a dataset containing the full history of 
+General Assembly votes by each country to determine what 
+countries vote similarly and which do not. We will also 
+explore how this changes through time.
+
+
+# Problem 1
+
+We'll start by loading the United Nations voting data into R 
+and performing some data wrangling. We use data from this paper:
+
+> Voeten, Erik; Strezhnev, Anton; Bailey, Michael, 2009, "United Nations General Assembly Voting Data", http://hdl.handle.net/1902.1/12379, Harvard Dataverse, V11
+
+In this problem, we will combine information from three sources 
+to create the datasets that we will use to study voting behavior.
+
+### Problem 1A
+
+We have learned how to import text files into R. Here we are 
+going to load a data object that is saved to a file. To get 
+an idea of how this works try the following:
+
+```{r}
+temp_filename <- tempfile() ## creaate tempory file name
+temp_object <- 1:5 ## create an R object
+save(temp_object, file=temp_filename) ## save the r object to file
+rm(temp_object) ## remove object
+load(temp_filename) ## load object from file
+temp_object ## note that it's back
+```
+
+We usually use the suffix `.RData` or `.rda` for these objects. 
+
+The data for this project is stored as an `.RData` file. Go to 
+[this web page](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379). 
+To get the `.RData` file, click on the Download button for 
+`rawvotingdata13.tab` and choose the `RData format`.
+
+To load the data set into R, use the `load()` function.
+Define the name of the object as `x` (but do NOT print it 
+out as it has over 1 million rows).
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 1B
+
+The first problem to overcome is that if you try to print 
+this object, it will crash your R session -- it's just that 
+big! (`r nrow(x)` rows). So first wrap it in `tbl_df(x)`,
+and call it `votes`. After doing this you can erase `x` with `rm(x)`.
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 1C
+
+We note that the data is already arranged according to the 
+rules of tidy data. There is one row for each observation 
+and one column for each variable. 
+
+Download the `Codebook.pdf` file from [this page](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379). 
+How would you interpret the vote column? How many of each 
+kind of vote are in this dataset? 
+
+```{r}
+## put your code here
+
+```
+
+
+Of the five types of votes, which three would provide information 
+about the country's position on an issue? Which two would not?
+
+**Your answer here**: 
+
+
+Filter out the types of votes that do not provide information 
+about our countries position on an issue from our dataset.
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 1D 
+
+According to the codebook, which column represents countries? 
+What type of unique code is used to represent each country?
+
+**Your answer here**:  
+
+Create new `country` column that contains country names 
+based on this column. Hint: check out the [countrycode](https://cran.r-project.org/web/packages/countrycode/countrycode.pdf) 
+package. 
+
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 1E
+
+Before continuing let's wrangle the country names a bit. We are 
+renaming countries with long names and renaming Congo to 
+distinguish it from Democratic Republic of Congo. We make use 
+of the powerful remapping function `revalue()` from `plyr` 
+package. You should **not** load `plyr` though as it will 
+create confusion with `dplyr` functions.
+
+```{r}
+library(tidyr)
+mapping <- c("United States"="USA",
+          "United Kingdom"="UK",
+          "Korea, Republic of"="South Korea",
+          "Lao People's Democratic Republic"="Laos",
+          "Yemen People's Republic"="South Yemen",
+          "Saint Vincent and the Grenadines"="Saint Vincent",
+          "Congo"="Congo Republic")
+votes <- votes %>% mutate(country = plyr::revalue(country, mapping)) %>%
+  separate(country, into = c("country", "extra"), sep=",", fill="right")
+```
+
+Right now we have information about how every country voted 
+on every resolution. But we do not have any information about
+the resolutions themselves (e.g. not what their title or topic
+was, or what date they were voted on). 
+Next, we will bring this data in as well.
+
+This data is provided as `descriptions.csv`. 
+Read it in using the `readr` package and wrangle it as shown below:
+
+```{r}
+library(readr)
+
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/un-resolutions-descriptions.csv"
+descriptions <- read_csv(url, col_types = list(date = col_date("%m/%d/%y")))
+
+## from warning and looking at csv we see
+## line 1483 has an extra "
+## it's supposed to be a 0
+descriptions[1483,"ec"] <-0
+
+library(lubridate)
+y <- year(descriptions$date)
+year(descriptions$date) <- ifelse(y > 2030, y - 100, y)
+```
+
+Count the number of votes that were taken in each year. 
+Create a line graph of the number of votes per year.
+
+```{r}
+## put your code here
+
+```
+
+
+What year would we want to filter out from the dataset 
+because there was only one vote? 
+
+**Your answer here**: 
+
+Filter it out now.
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 1F
+
+Read the `Codebook.pdf` about this dataset. Who classified certain votes 
+as "important"? 
+
+**Your answer here**:  
+
+What percent of votes in history were categorized as "important"?
+
+```{r}
+## put your code here
+
+```
+
+
+The most interesting analyses can be done by combining the description 
+and country-voting data.
+
+Join the `description` and country-voting data (`votes`) to create a new 
+data set. Remove the `yes`, `no`, and `abstain` columns from the 
+`description` dataset. These are per-vote summaries that we do not 
+need any more (and could be misleading). The final dataset should be called 
+`votes`, which you will continue to use throughout the homework. 
+
+```{r}
+## put your code here
+
+```
+
+
+
+# Problem 2
+
+### Problem 2A
+
+Canada and the US have been allies since the UN was created. 
+We can create a matrix of all votes for these two countries using 
+the `spread()` function in `tidyr` package like this:
+
+```{r}
+library(tidyr)
+y <- votes %>% 
+  filter(country %in% c("USA", "Canada")) %>%
+  mutate(year = year(date)) %>%
+  select(rcid, year, importantvote, country, vote) %>%
+  spread(country, vote)
+```
+
+We can see how often they have voted together in important votes 
+and not-important votes:
+
+```{r}
+y %>% 
+    group_by(importantvote) %>% 
+    summarize(mean(USA==Canada, na.rm=TRUE))
+```
+
+For important votes, compute the percentage in which the US and Canada
+voted the same. Calculate this percentage for each year and call it 
+`agreement`. Fit a linear model using `lm()` to predict `agreement`
+with `year`. 
+
+```{r}
+## put your code here
+
+```
+
+What is the trend predicted by the linear model? 
+Is it statistically significant?
+
+**Your answer here**: 
+
+
+
+### Problem 2B
+
+In the previous problem we found a negative trend in the agreement 
+between the USA and Canada throughout the years. Interpreting this 
+linear model would imply that disagreement between these two counties 
+was worse during the Clinton administration (1992-2000) than the 
+Reagan administration (1980-1998). 
+
+Now, instead of blindly interpreting the regression results, 
+plot the data and use a smoother to estimate a trend. Based on this 
+analysis, how do thes Regan and Clinton administrations compare? 
+
+**Hint**: Make sure to pick a window size or span that creates 
+a trend that goes through data.
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 2C
+
+Make the plot above for the agreement through time between the US
+and the following countries: Israel, UK, Mexico, Cuba, and China. 
+Make two plots: one for important votes to non-important votes. 
+
+```{r}
+## put your code here
+
+```
+
+Describe the observed patterns.
+
+**Your answer here**: 
+
+
+
+# Problem 3
+
+In this problem, we will focus only on important votes. 
+To get a better idea of who votes together we can compute a 
+distance between each country. We will focus on countries that 
+voted more than 95% of time in the 368 votes
+
+```{r}
+countries <- votes %>% 
+                filter(importantvote==1) %>% 
+                group_by(country) %>% 
+                summarize(p=n()/368) %>% 
+                filter(p>=0.95) %>% 
+                .$country
+```
+
+We can create a matrix with all the votes using the `spread()` function:
+
+```{r}
+tmp <- votes %>% 
+    filter(country %in% countries & year(date) >= 1980 & importantvote == 1) %>%
+    select(rcid, country, vote) %>% 
+    spread(country, vote) 
+
+X <- as.matrix(tmp[,-1])
+rownames(X) <- tmp$rcid
+```
+
+### Problem 3A
+
+Create a distance matrix between each country. Call this matrix `d`. 
+
+**Hint**: Use the `dist()` function, but note that `X` has 
+countries in the columns and `dist()` computes distances between rows. 
+Look at the `dist` help file for more infomration. 
+You can use the default `method = "Euclidean"` in the `dist()` function. 
+You can switch rows to columns using the `t()` (transpose) function. 
+Finally, once you create the distance matrix `d` you can 
+visualize it using `heatmap()` or `hclust()`.
+
+```{r}
+## put your code here
+
+```
+
+
+What country is closest to US? Which is furthest?
+
+**Your answer here**: 
+
+
+### Problem 3B
+
+Given how close some countries are and how far others are to US in voting,
+we should be able to predict how the US will vote based on others. 
+Let's try to implement a machine learning algorithm to do this. 
+
+Use the `votes` data set to create a new dataset with seven columns. 
+One column will represent the USA vote as the outcome (call it `y`) and
+the last six columns will be the vote from the six countries examined 
+above in Problem 2 (include Canada), which will be used a predictors 
+in our machine learning algorithm. Only consider the important votes. 
+In the column for the USA vote column (`y`), remove the `Abstain` votes and
+only consider the `Yes` and `No` votes from the USA. Tranform the USA vote
+column (`y`) to contain only 0s and 1s where 0 = `No` vote and 1 = `Yes` vote.
+
+```{r}
+## put your code here
+
+```
+
+Use the `caret` R package to split the data into a training set with 
+80% of data and a test set with the remaing 20%. 
+Then use `glm()` to build a model. What is the accuracy?
+
+```{r}
+## put your code here
+
+```
+
+
+
+### Problem 3C 
+
+We see that obtain a very high accuracy, but note that this is a 
+random variable due to the random split of our data. 
+Try 10 new random splits and report on how much our accuracy changes.
+
+```{r}
+## put your code here
+
+```
+
+
+### Problem 3D 
+
+Compare your `glm()` model to a `knn()`. Use the `train()` function 
+to run 10 cross validations with leaving out 80% of the data. 
+Plot your results. 
+
+```{r}
+## put your code here
+
+```
+
+How many nearest neighbors should we use?
+
+**Your answer here**: 
