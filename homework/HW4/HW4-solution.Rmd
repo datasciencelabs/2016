@@ -1,4 +1,4 @@
-wha---
+---
 title: "Money Ball"
 output: html_document
 ---
