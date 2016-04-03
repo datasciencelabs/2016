@@ -33,6 +33,14 @@ dat <- read_csv(url)
 dat <- mutate(dat, label = as.factor(label))
 ```
 
+There a test set with no labels given:
+
+```{r}
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-test.csv"
+test<- read_csv(url)
+test
+```
+
 ## Data Exploration
 
 ```{r}
@@ -159,8 +167,6 @@ confusionMatrix(tab)
 Compete in Kaggle
 
 ```{r}
-url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-test.csv"
-test<- read_csv(url)
 test <- mutate(test, label=NA)
 otest <- test
 test <- compress(test)
