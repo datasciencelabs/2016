@@ -29,40 +29,34 @@ plotit <- function(dat, i, n=sqrt(ncol(dat)-1)){
 
 ```{r}
 url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
-dat <- read_csv(url)
-dat <- mutate(dat, label = as.factor(label))
+original_dat <- read_csv(url)
+original_dat <- mutate(original_dat, label = as.factor(label))
 ```
 
 There a test set with no labels given:
 
 ```{r}
 url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-test.csv"
-test<- read_csv(url)
-test
+original_test<- read_csv(url)
+View(original_test)
 ```
 
 ## Data Exploration
 
 ```{r}
-X <- sample_n(dat,200) %>% 
+X <- sample_n(original_dat,200) %>% 
                   arrange(label)
                    
 d <- dist(as.matrix(X[,-1]))
 image(as.matrix(d))
+
 plot(hclust(d),labels=as.character(X$label))
 ``` 
 
-
-Let's compress the predictors by combining groups of 16 pixels. 
-
-This will help in two ways:
-
-1. Make data easier to manage as it will be 16 times smaller
-
-2. Might imrpove distance calculations for digits that are slighlty to the right, left, up, or down.
+784 is too much for use to handle in a demo. So let's. We will compress the  predictors by combining groups of 16 pixels. 
 
 ```{r}
-tmp <- slice(dat,1:100)
+tmp <- slice(original_dat,1:100)
 names(tmp) <- gsub("pixel","",names(tmp))
 tmp <- tmp %>% mutate(obs = 1:nrow(tmp)) 
 tmp <- tmp %>% gather(feature, value, `0`:`783`) 
@@ -80,13 +74,13 @@ tmp <- tmp %>% group_by(obs) %>% spread(feature, value) %>% ungroup %>% select(-
 Let's write a function
 
 ```{r}
-compress <- function(tbl){
+compress <- function(tbl, n=4){
   names(tbl) <- gsub("pixel","",names(tbl))
   tbl %>% mutate(obs = 1:nrow(tbl)) %>% 
     gather(feature, value, `0`:`783`) %>% 
     mutate(feature = as.numeric(feature)) %>% 
     mutate(row = feature%%28, col =floor(feature/28)) %>% 
-    mutate(row = floor(row/4), col = floor(col/4)) %>% 
+    mutate(row = floor(row/n), col = floor(col/n)) %>% 
     group_by(obs, row, col)  %>% 
     summarize(label = label[1], value = mean(value)) %>% 
     ungroup %>% 
@@ -102,8 +96,7 @@ Compress the entire dataset. This will take a bit:
 
 
 ```{r}
-odat <- dat
-dat <- compress(dat)
+dat <- compress(original_dat)
 ```
 
 Note that some features are almost always 0:
@@ -121,7 +114,7 @@ plot(table(round(column_means)))
 Let's remove this low information feautures:
 
 ```{r}
-keep_columns <- which(column_means>1)
+keep_columns <- which(column_means>10)
 ``` 
 
 Let's define the training data and test data:
@@ -144,19 +137,19 @@ plot(hclust(d),labels=as.character(X$label))
 
 
 ```{r}
-tmp = sample_n(train_set,10000)
+tmp = sample_n(train_set,5000)
 
 control <- trainControl(method='cv', number=20)
 res <- train(label ~ .,
              data = tmp,
              method = "knn",
              trControl = control,
-             tuneGrid=data.frame(k=seq(1,10,2)),
+             tuneGrid=data.frame(k=seq(1,15,2)),
              metric="Accuracy")
 
 plot(res)
 
-fit <- knn3(label~., train_set, k=5)
+fit <- knn3(label~., train_set, k=3)
 pred <- predict(fit, newdata = test_set, type="class")
 
 tab <- table(pred, test_set$label)
@@ -164,16 +157,18 @@ confusionMatrix(tab)
 ```
 
 
-Compete in Kaggle
+Compete in Kaggle?
 
 ```{r}
-test <- mutate(test, label=NA)
-otest <- test
-test <- compress(test)
+original_test <- mutate(original_test, label=NA)
+test <- compress(original_test)
 test <- test %>% select(label, keep_columns+1)
 pred <- predict(fit, newdata = test, type="class")
 
-plotit(otest,4)
+i=11
+pred[i]
+plotit(original_test,i)
+
 res <- data.frame(ImageId=1:nrow(test),Label=as.character(pred))
 write.csv(res, file="test.csv", row.names=FALSE)
 ```
