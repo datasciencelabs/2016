@@ -250,7 +250,7 @@ y %>%
     summarize(mean(USA==Canada, na.rm=TRUE))
 ```
 
-For important votes, compute the percentage in which the US and Canada
+Compute the percentage in which the US and Canada
 voted the same. Calculate this percentage for each year and call it 
 `agreement`. Fit a linear model using `lm()` to predict `agreement`
 with `year`. 
