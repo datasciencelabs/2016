@@ -402,7 +402,7 @@ Try 10 new random splits and report on how much our accuracy changes.
 ### Problem 3D 
 
 Compare your `glm()` model to a `knn()`. Use the `train()` function 
-to run 10 cross validations with leaving out 80% of the data. 
+to run 10 cross validations leaving out 20% of the data. 
 Plot your results. 
 
 ```{r}
