@@ -18,7 +18,7 @@ and a more detailed explanation [here](http://www.netflixprize.com/assets/GrandP
 
 In this homework, you will build your own recommendation system.
 You will submit predicted recommendations for a test data set 
-where we have kept the actual recommendations hidden. The set 
+where we have kept the actual recommendations hidden. The test data set 
 that you will have to predict is [available on GitHub here](https://github.com/datasciencelabs/data/blob/master/movielens-test.csv.gz). 
 We will then check your performance and have our own Netflix 
 challenge. You are allowed to form group. The winning team, 
@@ -33,7 +33,7 @@ you to report it at the end.
 ## Problem 1
 
 ### Problem 1A
-Load the [large data set which is compressed](https://github.com/datasciencelabs/data/blob/master/movielens-test.csv.gz) into R. Call the data set `ratings`. 
+Load the [compressed train data set available on GitHub](https://github.com/datasciencelabs/data/blob/master/movielens-train.csv.gz) into R. Call the data set `ratings`. 
 How many users are there in the `ratings` data set? 
 How many movies are in the `ratings` data set? 
 What is the lowest rating in the data set? The highest? 
