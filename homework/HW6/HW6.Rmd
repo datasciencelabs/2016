@@ -3,6 +3,8 @@ title: "Netflix Challenge"
 output: html_document
 ---
 
+**This homework is due Monday April 18, 2016 at 11:59PM EST. When complete, submit your code in an R Markdown file and the knitted HTML via GitHub.**
+
 Recommendation systems use rating data from many products 
 and users to make recommendations for a specific user. 
 Netflix uses a recommendation system to predict your ratings
