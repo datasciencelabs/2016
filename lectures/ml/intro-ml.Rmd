@@ -1,0 +1,598 @@
+---
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+library(readr)
+library(knitr)
+library(broom)
+```
+
+# Machine Learning
+
+Perhaps the most popular data science methodologies come from _Machine Learning_. Machine learning success stories include the hand writing detection implemented by the postal service, speech recognition (Siri), movie recommendation systems, predicting hospitilization days from claims, and spam detectors. While artificial intelligence algorithms, such as those used by chess playing machines, 
+implement decision making based on programmable rules derived from theory or first principles, in Machine Learning decisions are based on algorithms built on data. Data comes in the form of an _outcome_ we want to predict and _features_ that we will use to predict the outcome. The general idea is that we build the algorithm using the data that includes the outcome so that in the future we can predict the outcome only using the features. Here we will use $Y$ to denote the outcome and $X_1, \dots, X_p$ to denote features. Note that there features are sometimes referred to as predictors or covariates.
+
+So the general set-up is as follows. We have a series of predictors:
+
+```{r,echo=FALSE}
+n <- 1
+tmp <- data.frame(outcome=rep("?",n), 
+                  feature_1 = paste0("X_1"),
+                  feature_2 = paste0("X_2"),
+                  feature_3 = paste0("X_3"),
+                  feature_4 = paste0("X_4"),
+                  feature_5 = paste0("X_5"))
+tmp %>% kable(align="c")
+```
+
+So we collect data for which we know outcome to build a model:
+
+```{r}
+```{r,echo=FALSE}
+n <- 10
+tmp <- data.frame(outcome=rep("Y_",n), 
+                  feature_1 = paste0("X_",1:n,",1"),
+                  feature_2 = paste0("X_",1:n,",2"),
+                  feature_3 = paste0("X_",1:n,",3"),
+                  feature_4 = paste0("X_",1:n,",4"),
+                  feature_5 = paste0("X_",1:n,",5"))
+tmp %>% kable
+```
+
+#### Assessment
+
+For each of the following determine if the outcome is continuos or categorical
+
+1. Digit reader
+2. Movie recommendations
+3. Spam filter
+4. Hospitalizations
+5. Siri
+
+
+##  Writing Detection Example
+
+Let's consider an example. The first thing that happens to letter when they are received in the post office is that they are sorted by zip code:
+
+![zip code](http://www.sethmad.com/wp-content/uploads/2015/01/finishedEnvelope.jpg)
+
+Originally humans had to sort these but today, thanks to machine learning algorithms, a computer can read zip codes. What are the outcomes and features? Here are three images of written digits. These have already been read by a human and assigned an outcome $y$: 
+```{r, echo=FALSE, cache=TRUE}
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
+digits <- read_csv(url)
+tmp <- lapply( c(1,4,5), function(i){
+    expand.grid(Row=1:28, Column=1:28) %>%  
+      mutate(id=i, label=digits$label[i],  
+             value = unlist(digits[i,-1])) 
+})
+tmp <- Reduce(rbind, tmp)
+tmp %>% ggplot(aes(Row, Column, fill=value)) + 
+    geom_raster() + 
+    scale_y_reverse() +
+    scale_fill_gradient(low="white", high="black") +
+    facet_grid(.~label)
+```
+
+The images are converted into $28 \times 28$ pixels and for each we obtain an grey scale intensity between 0 (white) to 256 (black). We can see these values like this:
+
+```{r}
+tmp %>% ggplot(aes(Row, Column, fill=value)) + 
+    geom_point(pch=21,cex=2) + 
+    scale_y_reverse() +
+    scale_fill_gradient(low="white", high="black") +
+    facet_grid(.~label)
+```
+
+#### Assessment:
+
+How many features are availalbe to us for prediction?
+
+
+So for each digit $i$ we have an outcome $Y_i$ which can be one of 10 categories: $0,1,2,3,4,5,6,7,8,9$ and features $X_{i,1}, \dots, X_{i,784}$ which can take values from 0 to 255. We use bold face to denote this vector of predictors $\mathbf{X}_i = (X_{i,1}, \dots, X_{i,784})$.
+
+The machine learning tasks is to build a predictor function, $f$ that converts $\mathbf{X}$ into a prediction category $\hat{Y}_i = f(\mathbf{X}_i)$. This may seem impossible right now. We will go step-by-step. You already know some of the techniques we are about to use.
+
+
+
+## Conditional Probabilities and Expectations
+
+Prediction problems can be divided into categorical and continuous outcomes. For categorical problems $Y$ can be one of $K$ classes. 
+ For examples, in the digit data, the outcome is categorical. The classes are the digits 0, 1, 2, 3, 4, 5, 6, 7, 8, and 9. In speech recognition, the outcome are all possible words we are trying to detect. Spam detection has to two outcomes: spam or not spam. Here we denote the $K$ categories with indexes $k=1,\dots,K$. However, for binary data we will use $k=0,1$. 
+
+For categorical data, the machine learning challenge can be thought of as trying to estimate the probability of $Y$ being any of the possible outcomes $k$ given a  set of predictors $X=(X_1,\dots,X_p)^\top$. So we are interested in the _conditional probabilities_: 
+
+$$
+f_k(x) = \mbox{Pr}(Y=k \mid X=x), k=1,\dots,K
+$$
+
+If we know $f_k(x)$ then we can optimize our predictions by simply predicting the $k$ with the largest probability $f_k(x)$. 
+
+Note that in some circumstances some errors are more costly. Failing to predicting a plane will malfunction before it crashes is a much more costly error than grounding a plane when in fact the plane is in perfect condition. But even in these cases knowing $f_k(x)$ will suffice for all to build optimal prediction models. If some errors are more costly than others we simply change the cutoffs used to predict one outcome or the other. For example in the plane example, we may ground the plane anytime the probability of malfunction is higher than 1/1000 as opposed to the default 1/2 used when all errors are equally undesired. 
+
+To simplify the exposition below, we will consider examples in which all errors are equally weighed. To simplify the exposition further, we will consider the case of binary data. 
+
+For binary data, you can think of the probability $\mbox{Pr}(Y=1 \mid \mathbf{X}=\mathbf{x})$ as the proportion of 1s in the stratum of the population for which $\mathbf{X}=\mathbf{x}$. 
+
+
+#### Connection between probabilities and expectations
+
+Many of the algorithms can be applied to both due to the connection between _conditional probabilities_ and _conditional expectations_. 
+Given that the expectation is the average of all $Y$ values, in this case the expectation is equivalent to the probability: 
+
+$$f(x) \equiv \mbox{E}(Y \mid \mathbf{X}=\mathbf{x})=\mbox{Pr}(Y=1 \mid \mathbf{X}=\mathbf{x})$$. 
+
+We therefore use only the expectation in the descriptions below as it is more general.
+
+In general, the expected value has an attractive mathematical property and it is that  minimized the expected distance between the predictor $\hat{Y}$ and $Y$:  
+
+$$
+\mbox{E}\{ (\hat{Y} - Y)^2  \mid  X=x \}
+$$ 
+
+#### Assessment
+
+For the father and son heights round each father height to the nearest intenger to form a predictor:
+
+```{r}
+data(father.son,package="UsingR")
+X <- round(father.son$fheight)
+```
+
+What is you prediction for son's height when $X=66$? Hint: use conditional expectation
+
+```{r}
+father.son %>% filter(round(fheight)==66) %>% summarize(mean(sheight))
+```
+
+## Regression as Prediction
+
+We have already done an exercise that can be considered a prediction exercise. Let's review it. 
+
+Suppose we are tasked for developing a prediction algorithm that given the adult height of a father $X$ we are tasked to predict the adult height of the son $Y$. 
+
+Note that unlike the digits example, height is a continuous outcome. So before developing the algorithm, we should ask how will we be judged. 
+
+The answer to this question is called the _loss function_ and a typical one for continuous outcomes is the loss squared:
+
+$$ \left(Y - \hat{Y}\right)^2 $$
+
+Because we  consider $Y$ to be a random variable we look at the expected value of this squared loss also called the _mean squared error_:
+
+$$ \mbox{E}\left\{ \left(Y - \hat{Y}\right)^2 \right\}$$
+
+We can show mathematically, that the $\hat{Y}$ that minimizes this quantity for an $X=x$ is the conditional expectation
+
+$$ \mbox{E}\left( Y \mid X=x\right)$$
+
+We are provided a training set to build a model:
+
+
+```{r scatterplot2, fig.cap="Heights of father and son pairs plotted against each other."}
+data(father.son,package="UsingR")
+father.son %>% ggplot(aes(fheight, sheight)) + geom_point() +
+  xlab("Father's height in inches") + ylab("Son's height in inches") + geom_smooth(se = FALSE)
+```
+
+
+#### Assessment
+
+1. What is the prediction rule to predict son's height from father's height? Hint: We know that the regression line provides and estimate of $\mbox{E}\left( Y \mid X=x\right)$.
+
+Answer: The above implies the following prediction function:
+
+$$ \hat{Y} = f(x) =  \bar{Y} + r \frac{s_y}{s_x}(x - \bar{X}) $$
+
+or 
+
+$$ \hat{Y} = f(x) =  69 + 0.5 (x - 68) $$
+
+We also actual know what what the expected loss will be because it is the standard error:
+
+$$
+\sqrt{1 - r^2}s_y = 2.44
+$$
+
+2. What is the prediction rule to predict father's height from son's height?
+
+$$ \hat{Y} = f(x) =  68 + 0.5 (x - 69) $$
+
+## Regression for a binary outcome
+
+We are given another prediction task. Given a bio260 students height predict their gender. We know that this will be a hard task because male and female heights are not that different relative to within gender variability. But we can do better than guessing.
+
+We have data to build this prediction algorithm from the height poll we took for the course:
+
+```{r, echo=FALSE}
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/bio260-heights.csv"
+dat <- read_csv(url)
+names(dat) <- c("time","gender","height")
+fixheight <- function(x){
+  y <- strsplit(x, "'")
+  ret <- sapply(y, function(z){
+    ifelse( length(z)>1, as.numeric(z[1])*12 + as.numeric(z[2]) ,
+            as.numeric(z[1]))
+  })
+  return(ret)
+}
+dat <- mutate(dat,height=gsub("ft","'",height) ) %>%
+  mutate(height= gsub("\"|inches|\ ","",height) ) %>%
+  mutate(height=fixheight(height))%>%
+  mutate(height=ifelse(height>96, height/2.54, height))%>%
+  mutate(height=ifelse(height==5.51, 65, height)) %>%
+  mutate(height=ifelse(height==5.11, 71, height)) %>%
+  mutate(height=ifelse(height>12, height, floor(height)*12+(height-floor(height))*10)) %>%
+  filter(gender %in% c("Female", "Male"))
+```
+
+```{r}
+dat %>% slice(1:5) %>% kable
+```
+
+#### Asssessment
+
+Create a predictor by rounding the heights to the nearest inch. What is the conditional probability of being Male if you are 70 inches tall?
+
+```{r}
+dat %>% filter(round(height)==70) %>%
+  summarize(mean(gender=="Male"))
+```
+
+## Training and Test sets
+
+To mimic an actual machine learning challenge. We will act as if we don't know the gender of, say, 30 students. We call this the _test_ set. We will build the model on the remaining data for which we know the outcome. We call this the _training_ set. 
+
+```{r}
+set.seed(5)
+trainIndex <- sample(rep(c(TRUE, FALSE),c(nrow(dat)-30,30)))
+dat <- mutate(dat, train = trainIndex) 
+x````
+
+We will evaluate our approach by applying our algorithm to the test set and, only after applying the model, we will peek at the outcome and build a confusion matrix. 
+
+```{r}
+dat %>% filter(train) %>% ggplot(aes(gender, height)) +
+  geom_boxplot()
+```
+
+We will define $Y=1$ for males and $Y=0$ for females. To construct a prediction algorithm we want to estimate the proportion of the population that is male for any given height $X=x$ which we write as 
+
+$$
+\mbox{Pr}( Y = 1 | X=x) 
+$$
+
+#### Assessment
+
+Define the following predictor
+
+```{r}
+X = round(dat$height)
+```
+
+Estimate $f(x) = \mbox{Pr}( y = 1 | X=x)$ for each $x$ and plot it against $x$.
+
+```{r}
+dat %>% mutate(y = ifelse(gender=="Male", 1,0),
+               X = round(height)) %>% 
+  group_by(X) %>% summarize(f_hat=mean(y)) %>%
+  qplot(X,f_hat, data=.)
+```
+
+
+Since the results from the plot above look close to linear, and it is the only approach we currently know, we will try regression. This assumes that:
+
+$$f(x) = \mbox{Pr}( y = 1 | X=x)  = \beta_0 + \beta_1 x$$
+
+and we estimate $\beta_0$ and $\beta_1$ with least squares. Once we have estimates $\hat{\beta}_0$ and $\hat{\beta}_1$ we can obtain an actual prediction rule:
+
+$$
+\hat{f}(x) = \hat{\beta}_0+ \hat{\beta}_1 x
+$$
+
+Note: In general, we don't recommend motivating the use of a methods only with the fact that it is all you know how to code. 
+
+Here are our predictions:
+
+```{r}
+dat <- dat %>% mutate(truth = ifelse(gender=="Male",1,0)) 
+fit <- dat %>% filter(train) %>% lm(truth ~ height, data=.)
+
+dat <- mutate(dat, f_hat = predict(fit, newdata = dat)) %>%
+  mutate(pred=round(f_hat))
+
+dat %>% filter(!train) %>% select(truth, pred, height, f_hat) %>% slice(1:10) %>% kable(digits=2)
+```
+
+What is our loss function in this case? For categorical data a common way to evaluate prediction is simply counting mistakes. More generally we can make a _confusion matrix_ which tabulates all the outcomes along with the controls.
+When we only have 2 categories, then the confusion matrix report true positives, false positives, true negatives and false negatives. We can also report accuracy which is simply the percent of time we predict correctly.
+
+```{r}
+library(caret)
+tab <- table(  dat$pred , dat$truth )
+conf_matrix <- confusionMatrix(tab)
+conf_matrix$table
+conf_matrix$overall["Accuracy"]
+```
+
+## Logistic Regresion
+
+We wrote down the following model:
+
+$$f(x) = \mbox{Pr}( y = 1 | X=x)  = \beta_0 + \beta_1 x$$
+
+But note that the expression on the right can be any real number while the expression on the left is bounded between 0 and 1. 
+
+An extension that permits us to continue using regression-like models is to apply transformations that eliminate this disconnect. In the case of binary data the most common approach is to fit a _logistic regression_ model which makes use of the _logistics_ transformation 
+
+$$ g(p) = \log \frac{p}{1-p}$$
+
+#### Assessment
+
+Remake the plot from the previous assessment but this time, 
+split the heights into 10 groups by quantiles,
+plot $g(f_hat)$. To avoid infinities, convert 1 to 0.99 and 0 to 0.01 and remove $X>70$
+
+```{r}
+dat %>% mutate(y = ifelse(gender=="Male", 1,0), 
+                X=round(height)) %>% 
+  filter(X<=70) %>%
+  group_by(X) %>% summarize(f_hat=mean(y)) %>%
+  mutate(ifelse(f_hat==1, 0.99, f_hat)) %>%
+  mutate(ifelse(f_hat==0, 0.01, f_hat)) %>%
+  qplot(X,log(f_hat/(1-f_hat)), data=.)
+```
+
+This logistic transformation converts probability to log odds. Odds are how much more likely something will happen compared to not happening. So $p=0.5$ means the odds are 1 to 1 and the log odds 0. If $p=0.75$ the odds are 3 to 1. A nice characteristic of this transformation is that transforms probabilities to be symmetric around 0:
+
+```{r}
+p <- seq(0.01,.99,len=100)
+qplot(p, log( p/(1-p) ), geom="line")
+```
+
+Logistic regression simply fits the following model to data:
+
+$$ 
+\left\{ \mbox{E}(Y \mid X=x) \right\} = \beta_0 + \beta_1 x
+$$
+
+Instead of least squares we compute the _maximum likelihood estimate_ (MLE). You can learn more about this concept in a [statistical theory text](http://www.amazon.com/Mathematical-Statistics-Analysis-Available-Enhanced/dp/0534399428). 
+
+In R we can fit the model and obtain predictions in a similar way to using `lm`. We use the function `glm` and specify the family (`glm` is more general the logistic). When using predict we also need to specify what prediction we want. You can get help using `?predict.glm`
+
+
+```{r}
+fit <- dat %>% filter(train) %>% 
+  glm(truth ~ height, data=., family = "binomial")
+
+dat <- mutate(dat, glm_f_hat = 
+                predict(fit, newdata = dat, type="response")) %>%
+  mutate(glm_pred=round(f_hat))
+
+dat %>% filter(!train) %>% select(truth, glm_pred, height, glm_f_hat) %>% slice(1:10) %>% kable(digits=2)
+```
+
+In this case we get practically the same prediction rule:
+
+```{r}
+dat %>% rename(lm_f_hat = f_hat) %>% ggplot(aes(lm_f_hat, glm_f_hat)) + geom_point()
+```
+
+and the same confusion matrix.
+```{r}
+library(caret)
+tab <- table(  dat$glm_pred , dat$truth )
+conf_matrix <- confusionMatrix(tab)
+conf_matrix$table
+conf_matrix$overall["Accuracy"]
+```
+
+## Bayes' Rule
+
+The best we can do in a Machine Learning problem is when we actually know
+
+$$
+f(x) = \mbox{Pr}(Y=1|X=x) 
+$$
+
+This gives us what we call _Bayes' Rule_. However, in practice we don't know Bayes' Rule and estimating it is the main challenge.
+
+
+## Naive Bayes
+
+
+_Naive Bayes_ is an approach that tries to estimate $$\mbox{Pr}(Y=1|X=x) $ using Bayes theorem.
+
+In this particular example we know that the normal distribution works rather well for the heights $X$ for both classes $y=1$ (male) and $y=0$ (female). This implies that we can approximate the distributions $p_{X|Y=1}$ and $p_{X|Y=0}$. We can easily estimate parameters from the data:
+
+```{r}
+params <- dat %>% filter(train) %>% group_by(gender) %>% summarize(avg = mean(height), sd = sd(height))
+params
+```
+
+
+Using Bayes rule we can compute:
+
+$$
+f(x) = \mbox{Pr}(Y=1|X=x) = \frac{\pi p_{X|Y=1}(x)}
+{(1-\pi) p_{X|Y=0}(x) + \pi p_{X|Y=1}(x)}
+$$
+
+Here $\pi$ is the probability of being a male. Which for our class we can easily compute
+
+```{r}
+pi <- filter(dat, train) %>% summarize(pi=mean(truth)) %>% .$pi
+```
+
+
+New we can use our estimates of average and standard deviation estimates to get an actual rule:
+
+```{r}
+x <- dat$height
+p0 <- dnorm(x, params$avg[1], params$sd[1])
+p1 <- dnorm(x, params$avg[2], params$sd[2])
+f_hat <- pi*p1/(pi*p1 + (1-pi)*p0)
+```
+
+Mathematically we can show that in this very similar to the GLM prediction. However, we leave the demonstration to a more advanced text: such as [this one](http://statweb.stanford.edu/~tibs/ElemStatLearn/). We can see this empirically:
+
+```{r}
+qplot(dat$glm_f_hat, f_hat)
+```
+
+Note that once we have more than one predictor, the probability densities get much more complicated.
+
+## Multiple Predictors  
+
+In the two simple examples above we only had one predictor. We actually do not consider these machine learning challenges, which are characterized by including many predictors. Let's go back to the digits example in which we had 784 predictors. For illustrative purposes we will build an example with 2 features and only two classes, 2s and 7s. Then we will go back to the original 784 feature example.
+
+First lets filter to include only 2 and 7s:
+```{r}
+if(!exists("digits")){
+  url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
+digits <- read_csv(url)
+}
+dat27 <- digits %>% filter(label%in%c(2,7))
+## labels are not numbers
+dat27 <- mutate(dat27, label =  as.character(label))
+```
+
+
+Note that two distinguish 2s from 7s it might be enough to look at the number of non-white pixels in the upper-left and lower-bottom quadrants:
+
+```{r, echo=FALSE}
+tmp <- lapply( c(40,45), function(i){
+    expand.grid(Row=1:28, Column=1:28) %>%  
+      mutate(id=i, label=dat27$label[i],  
+             value = unlist(dat27[i,-1])) 
+})
+tmp <- Reduce(rbind, tmp)
+tmp %>% ggplot(aes(Row, Column, fill=value)) + 
+    geom_raster() + 
+    scale_y_reverse() +
+    scale_fill_gradient(low="white", high="black") +
+    facet_grid(.~label) + 
+    geom_vline(xintercept = 14.5) +
+    geom_hline(yintercept = 14.5)
+```
+
+So we will define two features $X_1$ and $X_2$ as the percent of non-white pixels in these two quadrants respectively. We add these two features to the `dat27` table
+
+```{r}
+row_column <- expand.grid(row=1:28, col=1:28)
+ind1 <- which(row_column$col <= 14 & row_column$row <=14)
+ind2 <- which(row_column$col > 14 & row_column$row > 14)
+ind <- c(ind1,ind2)
+X <- as.matrix(dat27[,-1])
+X <- X>200
+X1 <- rowSums(X[,ind1])/rowSums(X)
+X2 <- rowSums(X[,ind2])/rowSums(X)
+dat27 <- mutate(dat27, X_1 = X1, X_2 = X2)
+```
+
+For illustrative purposes we consider this to be the population and use this data to define an $f(X_1, X_2)$. Here is $f$ as a function of $X_1, X_2)$.
+
+```{r, echo=FALSE, cache=TRUE}
+y <- as.factor(dat27$label)
+x <- cbind(X1, X2)
+library(RColorBrewer)
+my_colors <- brewer.pal(11,"RdBu")
+library(caret)
+fit <- knn3(x, y, 401)
+GS <- 150
+X1s <- seq(min(X1),max(X1),len=GS)
+X2s <- seq(min(X2),max(X2),len=GS)
+df <- expand.grid(X_1=X1s, X_2=X2s)
+yhat <- predict(fit, newdata = df, type="prob")[,2]
+df <- mutate(df, yhat=yhat)
+f <- loess(yhat~X_1*X_2, data=df, 
+           degree=1, span=1/5)$fitted
+
+df <- df %>% mutate(f=f) 
+true_f <- df %>%
+  ggplot(aes(X_1, X_2, fill=f))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D"))+ geom_raster() 
+true_f
+```
+
+Next we will take a smaller random sample to mimic our training data as well as out test data.
+
+```{r}
+set.seed(1971)
+dat <- sample_n(dat27, 1000)
+dat <- dat %>% mutate(y = ifelse(label=="2",0,1 ))
+```
+
+We start by creating a train and test sets using the `caret` package:
+
+```{r}
+library(caret)
+inTrain <- createDataPartition(y = dat$label, p=0.5)
+train_set <- slice(dat, inTrain$Resample1)
+test_set <- slice(dat, -inTrain$Resample1)
+```
+
+We can visualize the training data now using color to denote the classes:
+
+```{r}
+train_set %>% ggplot(aes(X_1, X_2, fill = label)) +
+  geom_point(pch=21,cex=5) 
+```
+
+Let's try logistic regression. The model is simply:
+
+$$ g(\mbox{Pr}(Y=1 \mid X_1=x_1 , X_2 = x_2) = 
+\beta_0 + \beta_1 x_1 + \beta_2 x_2$$
+
+and we fit it like this:
+```{r}
+fit <-  glm(y~X_1+X_2, data=train_set, family="binomial")
+```
+
+
+#### Assessment
+
+What type of function is the border between calling 0s and 1s? Hint: what kind of fucntions solves this
+
+$$f(x_1, x_2) = 0.5$$ 
+
+We can actually see the answer by drawing $f$:
+
+```{r, fig.width=10, fig.height=6}
+GS <- 150
+for_plot <- expand.grid(
+  X_1 = seq(min(train_set$X_1),max(train_set$X_1),len=GS),
+  X_2 = seq(min(train_set$X_2),max(train_set$X_2),len=GS))
+f_hat <- predict(fit, newdata=for_plot, type="response")
+g1 <- for_plot %>% mutate(f_hat = f_hat) %>% 
+  ggplot(aes(X_1, X_2, fill=f_hat))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D"))+ geom_raster() 
+library(gridExtra)
+grid.arrange(true_f, g1, nrow=1)
+```
+
+Note that this is a problem because the real $f$ has a non-linear boundary as seen in the figure. We will learn techniques to
+
+```{r}
+pred <- predict(fit, newdata = test_set, type="response")
+tab <- table(pred=round(pred), truth= test_set$y)
+conf_matrix <- confusionMatrix(tab)
+conf_matrix$table
+conf_matrix$overall["Accuracy"]
+```
+
+
+#### Assessment
+
+Can we use the empirical bayes approach here? Why or what not?
+If we do, notice we have to model the joint distributions
+$f_{X_1,X_2 \mid Y=1}$ and $f_{X_1,X_2 \mid Y=1}$. How may total parameters would this involve if we used the bivariate normal distribution?
+
+
+
+    
+
+
+

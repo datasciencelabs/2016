@@ -1,0 +1,249 @@
+---
+title: "Regression in Practice"
+output: html_document
+---
+
+# Regression
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(broom)
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+```
+
+## Sophomore Slump 
+
+Wikipedia defines the _sophomore slump_ as 
+
+> A sophomore slump or sophomore jinx or sophomore jitters refers to an instance in which a second, or sophomore, effort fails to live up to the standards of the first effort. It is commonly used to refer to the apathy of students (second year of high school, college or university), the performance of athletes (second season of play), singers/bands (second album),television shows (second seasons) and movies (sequels/prequels).
+
+In Baseball the phrase is used to describe the observation that players that win Rookie of the Year don't do as well during their second year. 
+"Will MLB's tremendous rookie class of 2015 suffer a sophomore slump?" asks this [article](http://www.foxsports.com/mlb/story/kris-bryant-carlos-correa-rookies-of-year-award-matt-duffy-francisco-lindor-kang-sano-120715) of the Sophomore Slump in baseball. 
+
+Examining the data for batting average we see that this observation holds true.
+
+```{r}
+library(Lahman)
+###we remove pitchers
+playerInfo <- group_by(Fielding, playerID) %>% summarize(POS=POS[1]) %>% left_join(Master, by="playerID") %>% select(playerID, nameFirst, nameLast, POS)
+ROY <- filter(AwardsPlayers, awardID == "Rookie of the Year") %>% 
+  left_join(playerInfo, by="playerID") %>% filter(POS!="P") %>%
+  rename(rookieYear = yearID) %>%
+  right_join(Batting, by="playerID") %>% 
+  mutate(AVG=H/AB)  %>%  
+  filter(yearID==rookieYear | yearID==rookieYear+1) %>% group_by(playerID) %>% mutate(rookie = ifelse(yearID==min(yearID), "rookie", "sophomore")) %>%
+  filter(n()==2) %>% ungroup %>%
+  select(playerID, rookieYear, rookie, nameFirst, nameLast, AVG) %>%
+  spread(rookie, AVG)
+options(digits = 3)
+arrange(ROY, desc(rookie))
+cat(mean(ROY$sophomore - ROY$rookie <= 0)*100,"% performed worse.", sep="")
+```
+
+So is it "jitters" or "jinx"? Let's look at all players in 2013 and 2014 seasons that batted more than 130 times (minimum to win Rookie of the Year).
+
+```{r}
+dat <- Batting %>% filter(yearID%in%2013:2014) %>% group_by(playerID,yearID) %>%  filter(sum(AB)>=130) %>% summarize(AVG=sum(H)/sum(AB))  %>% ungroup %>% 
+  spread(yearID, AVG) %>% filter(!is.na(`2013`) & !is.na(`2014`))
+dat <- right_join(playerInfo, dat, by="playerID") %>% filter(POS!="P") %>% select(-POS)
+arrange(dat, desc(`2013`)) %>% select(-playerID)
+```  
+
+Note that the same pattern arises. Batting averages go down. But look at what happens at for the worse hitters of 2013:
+
+```{r}
+arrange(dat, `2013`) %>% select(-playerID)
+```
+
+### Assessment
+
+Miguel Cabrera hit 348 in 2013. Use linear regression to predict his 2014 average. Use the `broom` package to get a prediction for all players. In general how does the prediction for 2014 compare to the 2013 performance? 
+
+```{r}
+fit <- dat %>% do(augment(lm(`2014`~`2013`, data=.), data=.))
+select(fit, nameFirst, nameLast, X2013, .fitted, X2014) %>% arrange(desc(X2013)) %>% tbl_df
+```
+
+## Regression Fallacy 
+
+In the assessment we noted that the correlation is not 1:
+
+```{r}
+summarize(dat, cor(`2013`,`2014`))
+```
+
+We can see this in a scatterplot of the standardized values:
+
+```{r}
+dat %>% ggplot(aes(scale(`2013`), scale(`2014`))) + geom_point() + geom_smooth(method = "lm", se=FALSE, col="blue") + geom_abline(intercept = 0, slope = 1) + xlab("2013") + ylab("2014") +  scale_x_continuous(limits=c(-3,3)) +  scale_y_continuous(limits=c(-3,3))
+```
+
+The data look very much like a bivariate normal distribution which means we predict 2014 batting average $Y$ for any given player that had 2013 batting average $X$ with:
+
+$$ \frac{Y - 255}{32} = 0.46 \left( \frac{X - 261}{23}\right) $$
+
+Because the correlation is not perfect regression tells us that on average, expect high performs from 2013 will to do a bit worse in 2014. It's not a jinx, it's just due to the chance. In the context of linear models 
+
+## Correlation is not causation
+
+Correlation is not causation is perhaps the most important lesson one learns in a statistics class. Here is just one example that underscores this.
+
+```{r, echo=FALSE}
+## Extracted from http://www.tylervigen.com/spurious-correlations
+library(dplyr)
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+dat <- data.frame( divorce_rate_maine = c(5, 4.7, 4.6, 4.4, 4.3, 4.1, 4.2, 4.2, 4.2, 3.7)/1000,
+                   margarine_consumption_per_capita = c(8.2, 7, 6.5, 5.3, 5.2, 4, 4.6, 4.5, 4.2, 4.1),
+                   year = 2000:2009) 
+dat %>% ggplot(aes( margarine_consumption_per_capita, divorce_rate_maine*1)) + geom_point(cex=3) + geom_smooth(method = "lm") + 
+  ggtitle(paste("Correlation =", round(cor(dat$margarine_consumption_per_capita, dat$divorce_rate_main),2))) +
+  xlab("Margarine Consumption per Capita (lbs)") + ylab("Divorce rate in Maine (per 1000)")
+```
+
+You can see many more examples of these spurious correlations [here](http://tylervigen.com/spurious-correlations). There are many reasons that a variable $X$ can correlated with a variable $Y$ without being the cause. One obvious one is when $Y$ is actually the cause of $X$. Another is when we have a third variable $Z$ that affects both $X$ and $Y$. We call these _confounders_. In some cases we can use linear models to account for confounders.
+
+
+#### Do Bases on Ball predict runs ?
+
+
+Bases on balls (BB) and runs (R) correlate at the team level:
+
+The data looks bivariate normal and a linear regression analysis tells us that BB does indeed predict runs.
+```{r}
+Teams %>% filter(yearID > 1961 & G==162) %>%  lm(R ~ BB, data = .) %>% 
+  tidy(conf.int = TRUE)
+```
+
+If you have experience watching baseball you know that HR tend to receive many BBs. And we know that HR predict runs. The following plot confirms what we are pointing out. We stratify players by the number of HRs they hit and examine the distribution of BB. We only consider players with more than 500 plate appearances.
+
+```{r}
+Batting %>%
+  filter(yearID >= 1961 & BB+AB > 500 & !is.na(HR) & !is.na(BB)) %>% 
+  mutate(HR = factor(pmin(HR, 40))) %>%
+  ggplot(aes(HR, BB)) +
+  geom_boxplot()
+```
+
+So we have observed or know the following
+
+* BB are associated with Runs
+* HR cause runs
+* Players that hit many HR are expensive. 
+* Players with many BB without many HR are not that expensive.
+
+This seems to imply we should search for players with few HR but many BB as they will be expensive and produce runs. But what if the association between BB and R is completely explained by HR?
+
+One way we can answer this question is by keeping HR fixed and examining the relationship within the strata. 
+
+#### Assessment 
+
+We can't perform this analysis on a single year, because there are not enough teams to obtain strata with more than one or two teams. Instead we will combine all data years since 1961. 
+
+Start by creating a data set with R, BB and HR for every team from 1961 to today. What is the correlation between each of the three pairs.
+
+```{r}
+Teams %>%  filter(yearID >= 1961 & G==162) %>% 
+  summarize(cor(R,BB), cor(R,HR), cor(BB,HR))
+```
+
+#### Assessment 
+
+One way to eliminate the the possibility the the BB effect on runs is driven by the confounding with HR is to keep HRs fixed and then examine the relationship. Give a confidence interval for the effect of BB on R for teams with 120-130 HRs. Make a plot to see if the 
+Consider only teams from 1961 and beyond. 
+
+Compare to the coefficient when we don't stratify.
+
+```{r}
+my_data <- Teams %>%  filter(yearID >= 1961 & G==162 & HR %in% 120:130)
+my_data %>% ggplot(aes(BB,R)) + geom_point() + geom_smooth(method = "lm")
+my_data %>% lm(R ~ BB, data = .) %>% tidy(conf.int = TRUE)
+```
+
+#### Assessment
+
+Now let's see if this holds for other strata.
+
+Here is an example of how you can use functions  `quantile` and `cut` to assign each team to a strata like this
+
+```{r}
+x <- rnorm(100)
+qs <- quantile(x, prob=seq(0,1,.2))
+group <- cut(x, qs, include.lowest = TRUE)
+table(group)
+```
+
+You this idea to make a scatter plot of R versus BB for 10 HR strata. Hint: use `facet_wrap`
+
+```{r}
+my_data <- Teams %>%  filter(yearID >= 1961 & G==162) %>%
+  mutate(group = cut(HR, quantile(HR, prob = seq(0,1,.1)), include.lowest=TRUE))
+my_data %>%
+  ggplot(aes(BB, R)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~group)
+```
+
+#### Assessment
+
+While the BB effect was certainly lower than before we controlled for HR, but it appears to be there. To check more formally we can fit a linear model to each strata.
+
+```{r}
+res <- my_data %>% group_by(group) %>%
+  do(tidy(lm(R ~ BB, data = .))) %>% ungroup
+```
+
+Note that the intercept increases linearly and that the BB effect seems about constant:
+
+```{r}
+res %>% select( group, term, estimate, std.error) %>%
+  filter(term=="BB") %>% 
+  ggplot(aes(group, estimate, 
+             ymin=estimate-2*std.error,
+             ymax=estimate+2*std.error)) +
+  geom_point() +
+  geom_errorbar()
+```
+
+If the effect of BB is linear and the same for all HR strata, and HR has a linear effect, then we might try this model:
+
+$$
+\mbox{Runs} = \beta_0 + \beta_{BB} \mbox{BB} + \beta_{HR}{HR} + \varepsilon
+$$
+
+In this model, we _adjust_ for HRs by including it as linear term. Note that we have already showed data that support this model. In general, simply fitting such a model does not necessarily adjust for a possible confounded. The model must be approximately correct.
+
+We can fit this model like this:
+
+```{r}
+Teams %>%
+  filter(yearID >= 1961 & G==162) %>%
+  lm(R~BB+HR, data=.) %>%
+  tidy
+
+```
+
+We can check residual plots:
+
+```{r}
+fit <- Teams %>%
+  filter(yearID >= 1961 & G==162) %>% 
+  do(augment(lm(R~BB+HR, data=.), data=.))
+qqnorm(scale(fit$.resid))
+abline(0,1)
+
+g1 <- fit  %>% ggplot(aes(HR,.resid)) + geom_point() + geom_smooth()
+g2 <- fit  %>% ggplot(aes(BB,.resid)) + geom_point() + geom_smooth()
+library(gridExtra)
+grid.arrange(g1, g2, nrow = 1)
+```
+
+
+
+
+
+
+

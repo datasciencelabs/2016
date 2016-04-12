@@ -1,0 +1,155 @@
+---
+title: "Regression with broom and dplyr"
+author: "David Robinson"
+date: "March 23, 2016"
+output: html_document
+---
+
+```{r echo = FALSE}
+library(knitr)
+opts_chunk$set(message = FALSE)
+```
+
+[broom](https://github.com/dgrtwo/broom) is a package for converting R model objects into "tidy" data frames that can be recombined, manipulated, and visualized using tools like dplyr and ggplot2.
+
+Install it with:
+
+```{r}
+install.packages("broom")
+```
+
+I'll start by listing some worthwhile resources for dplyr and broom:
+
+* [broom and dplyr vignette](https://cran.r-project.org/web/packages/broom/vignettes/broom_and_dplyr.html)
+* [broom manuscript](http://arxiv.org/abs/1412.3565)
+
+### mtcars data
+
+The mtcars dataset comes built into R, and comes with information about 32 cars:
+
+```{r}
+mtcars
+```
+
+(You can do `help(mtcars)` for more about each column). Let's look at two columns of interest:
+
+* `qsec` shows the speed and acceleration of the car, tested by the number of seconds it takes to drive a quarter of a mile.
+* `mpg` represents the gas efficiency, in miles per gallon
+
+Suppose we wanted to examine the relationship between the gas efficiency and the speed. We'd probably start with a graph:
+
+```{r}
+library(ggplot2)
+ggplot(mtcars, aes(qsec, mpg)) +
+  geom_point()
+```
+
+A relationship between the two (faster cars get fewer miles per gallon) is certainly plausible, though not certain. To test this statistically, we might perform a linear regression:
+
+```{r}
+fit <- lm(mpg ~ qsec, mtcars)
+```
+
+We can display a linear fit using the default print method:
+
+```{r}
+fit
+```
+
+This shows just the estimated intercept and slope. We can get a bit more information with summary:
+
+```{r}
+summary(fit)
+```
+
+This shows each of the estimates, standard errors, and p-values for the intercept and the slope. It also shows an overall $R^2$ value (variation in Y explained by X), and lots of other information.
+
+One of the problems with these coefficients, however, is that it's difficult to get out into a format that we can manipulate with dplyr, plot with ggplot2, or otherwise wrangle.
+
+For that, we use the broom package:
+
+```{r}
+library(broom)
+tidy(fit)
+```
+
+Notice that this is the same per-coefficient data that appears in the `summary(fit)` method. But instead of being displayed in a summary, it is in the form of
+
+1. A data frame
+2. Without rownames (they've been moved into the `term` column)
+3. With names that do not have spaces or punctuation (besides `.`).
+
+This makes the dataset ideal for further manipulation and recombination. broom works on many types of models (see the [README](https://github.com/dgrtwo/broom) for an extensive list), and all of its outputs are always in this form.
+
+One more neat trick with `tidy` is that it extract the confidence intervals for each coefficient at the same time:
+
+```{r}
+tidy(fit, conf.int = TRUE)
+```
+
+(See `help(tidy.lm)` for more that can be done with it).
+
+`tidy` is one of the three tidying functions provided by broom. The other two are `augment` and `glance`:
+
+```{r}
+augmented <- augment(fit)
+
+head(augmented)
+```
+
+The other, `glance`, gets out per-model values like R-squared (it's not relevant for HW4 so we're not going over it today).
+
+### Graph within groups using do and tidy
+
+Correlation does not imply causation. It's entirely possible that `mpg` and `qsec` are both affected by another confounding factor.
+
+Consider another column: `cyl`: this denotes the number of cylinders in the engine. Could this affect both acceleration and miles per gallon, such that their relationship otherwise disappears?
+
+```{r}
+ggplot(mtcars, aes(qsec, mpg, color = factor(cyl))) +
+  geom_point()
+```
+
+That certainly looks like it might be a confounding factor: cars with more cylinders are faster but have less gas mileage.
+
+Instead of performing one big regression, let's perform a regression within each group defined by the number of cylinders. We can do that with dplyr's `do`:
+
+```{r}
+library(dplyr)
+
+fits <- mtcars %>%
+  group_by(cyl) %>%
+  do(mod = lm(mpg ~ qsec, data = .))
+
+fits
+```
+
+The relevant expression is `lm(mpg ~ qsec, data = .)`- notice that we are performing the same regression as above, but this time we give `data = .`. The `.` means "the data frame within this current `group_by` group.
+
+We now have a list column called `mod` that contains the three per-group fits. We can extract out the terms and coefficients using `tidy`, which has a nice shortcut for working with list columns:
+
+```{r}
+tidy(fits, mod)
+```
+
+Notice that we've combined the three models, which each appear alongside a `cyl` showing what group they were in.
+
+We can also extract out the `augment` results, such as the residuals and fitted values:
+
+```{r}
+augment(fits, mod)
+```
+
+Finally (this is important for the homework), note that this last result drops all the columns from the original data besides `cyl`, `mpg`, and `qsec` (the ones involved in the model or the grouping). What if we wanted to keep those alongside the residuals or fitted values?
+
+We can fix this by doing two things: first, we remove the `mod =` in the original `do` statement- then we are no longer saving to a column, but rather expanding the data. Second, we add a `data = .` argument *to augment* alongside the `data = .` argument to `lm`- that tells augment to keep all the columns.
+
+```{r}
+augments <- mtcars %>%
+  group_by(cyl) %>%
+  do(augment(lm(mpg ~ qsec, data = .), data = .))
+
+augments
+```
+
+Notice that all the columns from the original, like `disp`, `hp`, and `wt` are included now.

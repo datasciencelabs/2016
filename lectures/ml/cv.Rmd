@@ -1,0 +1,175 @@
+---
+title: "cv"
+output: html_document
+---
+
+## Cross validation
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+```
+
+```{r}
+plotit <- function(dat, i, n=sqrt(ncol(dat)-1)){
+  dat <- slice(dat,i)
+  tmp <-  expand.grid(Row=1:n, Column=1:n) %>%  
+      mutate(id=i, label=dat$label,  
+             value = unlist(dat[,-1]))
+  tmp%>%ggplot(aes(Row, Column, fill=value)) + 
+    geom_raster() + 
+    scale_y_reverse() +
+    scale_fill_gradient(low="white", high="black") +
+    ggtitle(tmp$label[1])
+}
+```
+
+
+```{r}
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
+original_dat <- read_csv(url)
+original_dat <- mutate(original_dat, label = as.factor(label))
+```
+
+There a test set with no labels given:
+
+```{r}
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-test.csv"
+original_test<- read_csv(url)
+View(original_test)
+```
+
+## Data Exploration
+
+```{r}
+X <- sample_n(original_dat,200) %>% 
+                  arrange(label)
+                   
+d <- dist(as.matrix(X[,-1]))
+image(as.matrix(d))
+
+plot(hclust(d),labels=as.character(X$label))
+``` 
+
+784 is too much for use to handle in a demo. So let's. We will compress the  predictors by combining groups of 16 pixels. 
+
+```{r}
+tmp <- slice(original_dat,1:100)
+names(tmp) <- gsub("pixel","",names(tmp))
+tmp <- tmp %>% mutate(obs = 1:nrow(tmp)) 
+tmp <- tmp %>% gather(feature, value, `0`:`783`) 
+tmp <- tmp %>% mutate(feature = as.numeric(feature))
+tmp <- tmp %>% mutate(row = feature%%28, col =floor(feature/28))
+tmp <- tmp %>% mutate(row = floor(row/4), col = floor(col/4))
+tmp <- tmp %>% group_by(obs, row, col) 
+tmp <- tmp %>% summarize(label = label[1], value = mean(value)) 
+tmp <- tmp %>% ungroup
+tmp <- tmp %>%  mutate(feature = sprintf("X_%02d_%02d",col,row))
+tmp <- tmp %>%  select(-row, -col) 
+tmp <- tmp %>% group_by(obs) %>% spread(feature, value) %>% ungroup %>% select(-obs)
+```
+
+Let's write a function
+
+```{r}
+compress <- function(tbl, n=4){
+  names(tbl) <- gsub("pixel","",names(tbl))
+  tbl %>% mutate(obs = 1:nrow(tbl)) %>% 
+    gather(feature, value, `0`:`783`) %>% 
+    mutate(feature = as.numeric(feature)) %>% 
+    mutate(row = feature%%28, col =floor(feature/28)) %>% 
+    mutate(row = floor(row/n), col = floor(col/n)) %>% 
+    group_by(obs, row, col)  %>% 
+    summarize(label = label[1], value = mean(value)) %>% 
+    ungroup %>% 
+    mutate(feature = sprintf("X_%02d_%02d",col,row)) %>% 
+    select(-row, -col) %>% 
+    group_by(obs) %>% spread(feature, value) %>% 
+    ungroup %>% 
+    select(-obs)
+}
+```
+
+Compress the entire dataset. This will take a bit:
+
+
+```{r}
+dat <- compress(original_dat)
+```
+
+Note that some features are almost always 0:
+
+```{r}
+library(caret)
+set.seed(1)
+inTrain <- createDataPartition(y = dat$label,
+                               p=0.9)$Resample
+X <- dat %>% select(-label) %>% slice(inTrain) %>% as.matrix
+column_means <- colMeans(X)
+plot(table(round(column_means)))
+```
+
+Let's remove this low information feautures:
+
+```{r}
+keep_columns <- which(column_means>10)
+``` 
+
+Let's define the training data and test data:
+
+```{r}
+train_set <- slice(dat, inTrain) %>% select(label, keep_columns+1)
+test_set <- slice(dat, -inTrain) %>% select(label, keep_columns+1)
+```
+
+Note that the distances look a bit cleaner:
+```{r}
+X <- sample_n(train_set,200) %>% 
+                  arrange(label)
+                   
+d <- dist(as.matrix(X[,-1]))
+image(as.matrix(d))
+plot(hclust(d),labels=as.character(X$label))
+``` 
+
+
+
+```{r}
+tmp = sample_n(train_set,5000)
+
+control <- trainControl(method='cv', number=20)
+res <- train(label ~ .,
+             data = tmp,
+             method = "knn",
+             trControl = control,
+             tuneGrid=data.frame(k=seq(1,15,2)),
+             metric="Accuracy")
+
+plot(res)
+
+fit <- knn3(label~., train_set, k=3)
+pred <- predict(fit, newdata = test_set, type="class")
+
+tab <- table(pred, test_set$label)
+confusionMatrix(tab)
+```
+
+
+Compete in Kaggle?
+
+```{r}
+original_test <- mutate(original_test, label=NA)
+test <- compress(original_test)
+test <- test %>% select(label, keep_columns+1)
+pred <- predict(fit, newdata = test, type="class")
+
+i=11
+pred[i]
+plotit(original_test,i)
+
+res <- data.frame(ImageId=1:nrow(test),Label=as.character(pred))
+write.csv(res, file="test.csv", row.names=FALSE)
+```
+

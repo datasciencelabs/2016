@@ -1,0 +1,572 @@
+---
+title: "Models"
+output: html_document
+fontsize: 12pt
+---
+
+# Statistical Models
+
+"All models are wrong, but some are useful" -George E. P. Box
+
+When we see a confidence interval or p-value, it means a probability distribution of some sort was used to quantify the null hypothesis. Many times deciding which probability distribution to use is relatively straightforward. For example, when betting on black on roulette  we can use simple probability calculations to determine probability distribution of winnings. 
+
+The CLT is backed by theoretical results that guarantee that the approximation is accurate. However, we cannot always use this approximation, such as when our sample size is too small. Previously, we described how the sample average can be approximated as t-distributed when the population data is approximately normal. However, there is no theoretical backing for this assumption. We are now *modeling*. In the case of height, we know from experience that this turns out to be a very good model. 
+
+But this does not imply that every dataset we collect will follow a normal distribution. An examples are US incomes. The normal distribution is not the only parametric distribution that is available for modeling. Here we provide a very brief introduction to some of the most widely used parametric distributions and some of their uses in the life sciences. We focus on the models and concepts needed to understand the techniques currently used to perform statistical inference on high-throughput data. To do this we also need to introduce the basics of Bayesian statistics. For more in depth description of probability models and parametric distributions please consult a Statistics textbook such as [this one](https://www.stat.berkeley.edu/~rice/Book3ed/index.html). 
+
+
+## Linear Models
+
+We have implicitly been using a very simple linear models. We have been trying to predict a fixed parameter by taking samples. For example we have tried to estimate the probability of tossing a coin and observing a head, the proportion of blue beads in a jar, the average height of a population, and the difference in the proportion of votes two candidates, for example Obama and Romney , will receive. Here we will us general notation and represent the parameter we are trying to estimate with $\theta$. 
+
+We then obtain draws from a sampling model. We will denote the observed values with $Y$ and use indexes to denote the fact that we make, say, $N$ observations:
+
+$$Y_i = \theta + \varepsilon_i, i = 1, \dots N$$ 
+
+Each observation has an _error_ term $\varepsilon$. We assume that the expected value of the error is 0 and very often assume that the standard deviation is constant $\sigma$.
+
+Let's consider some simple examples
+
+#### Assessment
+
+This is a contrived example, but it will help us understand how we think about models and can use them in many situations. 
+
+If we are betting on black on roulette, we can let $Y_i$ be either -1 or 1. Now what is $\theta$ and what is the distribution of our error? What is the standard deviation of the errors? Hint: the expected value of the error must be 0.
+
+Answer: Our parameter is $\theta = -1/19$ and our errors are $1 - \theta$ with probability $9/19$ and $-1 - \theta$ with probability $10/19$. 
+
+Double check that the expected value is 0:
+```{r}
+20/19 * 9/19 - 18/19*10/19
+```
+
+The standard deviation we know is $2 \sqrt{ 9/19 \times 10/19}$. We can double check with a Monte Carlo
+
+```{r}
+B <- 10^5
+theta = -1/19
+Y <- sample( c(-1,1), B, replace=TRUE, prob=c(10/19, 9/19))
+error <- Y - theta
+prop.table(table(error))
+sqrt(mean(error^2))
+2*sqrt(10/19*9/19)
+```
+
+#### Assessment
+
+Let's consider the example of a demographer trying to estimate the average height of a population. We use the heights stored in R:
+
+```{r}
+data("father.son", package="UsingR")
+y <- father.son$sheight
+```
+
+If we now take a sample
+
+```{r}
+set.seed(1)
+Y <- sample(y, 25, replace = TRUE)
+```
+
+What are $\theta$, $N$, and $\varepsilon_1$ ?
+
+```{r}
+## N is 
+length(Y)
+## theta is 
+theta <- mean(y)
+## the firest error is 
+error_1 <- Y[1] - theta
+```
+
+#### Assessment 
+
+Note that in this example each individual in the population has an _error_. It may sound a bit strange but, if you are 1 inch taller than the average height, we call it an "error" of 1 inch. Compute all the errors for the population and explore the distribution. What is the standard deviation of this distribution?
+
+A) Exactly normal with $\sigma$ of about 3 inches
+B) Approximately normal with $\sigma$ of about 3 inches. Tails are slightly larger.
+C) These are not averages or sums so it is not approximately normal.
+D) Approximately normal with $\sigma$ of about 9 inches. Tails are slightly larger.
+
+```{r}
+error <- y - mean(y)
+hist(error)
+##the standard error is:
+sigma <- sqrt( mean( (error)^2 ))
+qqnorm(error/sigma)
+abline(0,1)
+```
+
+
+
+## Modeling Poll Results
+
+Let's start by looking at our guess-the-percent-of-blue-beads competition data. Let's use the code from the previous section:
+
+```{r, message=FALSE}
+library(readr)
+library(dplyr)
+
+filename <- "https://raw.githubusercontent.com/datasciencelabs/data/master/blue-bead-comp-results.csv"
+tab <- read_csv(filename)
+names(tab)<-c("timestamp", "name", "estimate","poll_sample_size","ci")
+tab <- mutate(tab,estimate=ifelse(estimate<1, estimate*100, estimate)) %>%
+  filter(estimate>20)
+```
+
+A total of 27 people used a sample size of about 100.
+
+```{r}
+filter( tab, abs(poll_sample_size-100)<51) %>% nrow
+```
+
+Very important: do not confuse the poll sample size with the number of observations in our model. Here each poll is an observation: $N=27$ while the poll sizes are about 100.
+
+Let's consider only those polls:
+
+```{r}
+tab <- filter(tab, abs(poll_sample_size-100)<51)
+```
+
+So we can write a model:
+
+$$Y_i = \theta + \varepsilon_i, i=1, \dots, N$$
+
+with $N=22$.
+
+#### Assessment
+
+Using the CLT theory we have learned, how do we model $\varepsilon$, what is the expected value and standard deviation of 
+$\varepsilon$? 
+
+Answer: According to CLT 
+
+$$ \varepsilon \sim \mbox{Normal}\left( 0, \frac{\sqrt{\theta (1-\theta)}}{\sqrt{100}} \right)$$
+
+#### Assessment 
+
+We already revealed that $\theta = 0.534$. Use this information and 
+data exploration to check if the model assumptions make sense. 
+
+```{r}
+theta <- 0.534
+Y <- tab$estimate/100 
+error <- Y - theta
+hist(error)
+se <- sqrt(theta*(1-theta))/sqrt(100)
+qqnorm(error/se)
+abline(0,1)
+```
+
+
+### Estimating parameters
+
+Earlier we showed how for this particular case we can aggregate results using what amounts to a weighted average. For this particular case, where we have a defensible model we can create an estimate of $\theta$ using the standard approach to fitting linear models. 
+
+The standard approach is to use the value that that minimizes the least squares equation:
+$$
+\sum_{i=1}^N (Y_i - \theta)^2
+$$
+
+This is called the _least squares estiamte_ (LSE). In this case is easy to show, with Calculus, that it is the sample average:
+
+$$
+\hat{\theta} = \frac{1}{N}\sum_{i=1}^N Y_i = \bar{Y}
+$$
+
+Because this is a sample average from a sampling model we know its expectation is $\theta$ and it's standard error is $\sigma / \sqrt{N}$ with $N$ the number of observations and $\sigma$ the standard deviation of the distribution of $\varepsilon$. But what is $\sigma$? 
+
+In this particular case statistical theory tells us that $\sigma$ should be:
+
+$$\frac{ \sqrt{ \theta (1-\theta) } }{\sqrt{100}}$$
+
+And this is extremely useful when we just have one poll. However, with many polls we can also use the data to estimate $\sigma$. The typical strategy is to use the the sample standard deviation:
+
+$$
+s = \sqrt{ \frac{1}{N-1}\sum_{i=1}^N (Y_i - \bar{Y})^2}
+$$
+
+We can compare this empirical approach to the more theoretical approach we have been using:
+
+```{r}
+sd(Y) ##compared to 
+sqrt(theta*(1-theta))/sqrt(100) ##or to
+theta_hat <- mean(Y)
+sqrt(theta_hat*(1-theta_hat))/sqrt(100) ##or to
+```
+
+Even if we didn't know these data came from individual polls we can still see that our model works rather well. Here is a confidence interval build with just the data, not using sampling theory for the polls:
+
+```{r}
+theta_hat <- mean(Y)
+s <- sd(Y)
+## confidence interval:
+theta_hat + c(-1,1)*qnorm(0.975)*s/sqrt(length(Y))
+```
+
+Here it is slightly more appropriate to use the t-distribution approximation:
+
+```{r}
+
+## or using the t-distribution
+theta_hat + c(-1,1)*qt(0.975, df=length(Y)-1)*s/sqrt(length(Y))
+```
+
+Note that this is a somewhat artificial experiment. The data were generated from a model we constructed. Let's see what happens when we try these models "in the wild".
+
+### The 2008 Presidential Elections
+
+
+We are going to use the 2008 presidential election as an example. To obtain the data we are going to scrape [this](http://www.pollster.com/08USPresGEMvO-2.html) web site.
+
+
+### Scrapping data from URLs
+
+Data often appears in tables on the web. These are typically HTML pages. From looking at the code for these pages you can see that tables follow a specific format which implies we can write computer programs to extract the data. For _markdown languages_ (ML) such as HTML the `XML` package is quite useful. The function `readHTMLTable` specifically targets tables.
+
+
+```{r}
+library(XML)
+theurl <- paste0("http://www.pollster.com/08USPresGEMvO-2.html")
+html_tables <- readHTMLTable(theurl,stringsAsFactors=FALSE)
+```
+
+This produces a list and the components are tables. If we look at this object we see that the first and only table is the one we are after:
+
+```{r}
+tab <- html_tables[[1]]
+```
+
+
+We want to have access to the dates of the polls. Take a look at how the save dates:
+
+```{r}
+head(tab$Dates)
+```
+
+We are going to need some serious wrangling here. We will learn a couple of useful functions first.
+
+### Wrangling Dates
+
+The `tidyr`, `stringr` and `lubridate` packages include powerful tools for dealing with dates.
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+```
+
+Let's go step-by-step:
+
+```{r}
+##use separate to split start and end dates
+### we convert it to a dplyr table:
+tab <- tbl_df(tab)
+tab <- tab %>% separate(col=Dates, into=c("start_date","end_date"), sep="-",
+                        fill="right") 
+select(tab, start_date, end_date)
+
+## if no end_data it means only one day was provided so use that as end as well
+tab <- tab %>% mutate(end_date = ifelse(is.na(end_date), start_date, end_date))
+select(tab, start_date, end_date)
+
+## no use seprate again to get month, day and year for start_date
+tab <- tab %>% separate(start_date, c("smonth", "sday", "syear"), sep = "/", 
+                        convert = TRUE, fill = "right") 
+select(tab, smonth:syear, end_date)
+
+### if end date has only 1 / then it is missing month, add it
+tab <- tab %>% mutate(end_date = ifelse(str_count(end_date, "/") == 1, 
+                                   paste(smonth, end_date, sep = "/"), end_date))
+select(tab, smonth:syear, end_date)
+
+## now use lubridate function mdy to conver to date
+tab <- tab %>% mutate(end_date = mdy(end_date)) 
+select(tab, smonth:syear, end_date)
+
+## add 2000 to year since it is currently 7 or 8
+tab <- tab %>% mutate(syear = ifelse(is.na(syear), year(end_date), syear + 2000)) 
+select(tab, smonth:syear, end_date)
+
+## now use unite to create a m/d/y string
+tab <- tab %>% unite(start_date, smonth, sday, syear) 
+select(tab, start_date, end_date)
+
+## covert it to date class
+tab <- tab %>% mutate(start_date = mdy(start_date))
+select(tab, start_date, end_date)
+```
+
+Note: we don't have to go step by step. Instead rewrite the above as a series of pipes.
+
+#### Extracting population size and type of poll
+
+If we wanted to know the sample size of the polls we look here:
+
+```{r}
+head(tab$`N/Pop`)
+```
+
+This column combines the sample size with the type population used by the poll. For example, LV means Likely Voters. We can use split again.
+
+```{r}
+tab <- separate(tab, `N/Pop`, into=c("N","population_type"), sep=" ", 
+                convert=TRUE, fill="left")
+```
+
+
+#### Adding Columns
+We will add a couple more columns for what we are doing: the Obama - McCAin difference, the days left before the election and the weeks left before the election:
+
+```{r}
+tab <- mutate(tab, Obama = as.numeric(Obama)/100, 
+              McCain=as.numeric(McCain)/100,
+              diff = Obama - McCain,
+              day=as.numeric(start_date - mdy("11/04/2008")),
+              week = floor(day/7))
+```
+
+## Modeling Poll Results (continued)
+
+Now consider all the polls of sample size 800. There are
+
+```{r}
+filter(tab, N==800) %>% nrow
+```
+
+of these. So we can write a model:
+
+$$Y_i = \theta + \varepsilon_i, i=1, \dots, N$$
+
+with $N=22$.
+
+Assessment: Using the CLT theory we have learned, how do we model $\varepsilon$, what is the expected value and standard deviation of 
+$\varepsilon$? 
+
+Answer: According to CLT 
+
+$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{\sqrt{\theta (1-\theta)}}{\sqrt{800}}\right)$$
+
+#### Assessment 
+
+Use data exploration to check if the model assumptions make sense. Note that we have the benefit of hindsight. The election night result was $\theta = 52.9 - 45.7 = 7.2$. 
+
+A. The data are approximately normal with the expected value and standard error as predicted.
+
+B. The expected value and standard error as predicted, but the data is not normal
+
+C. The data look approximately normal but the expected and standard error are not what the theory predicts
+
+D. I have no idea what to do.
+
+```{r}
+Y <- filter(tab, N==800)$diff
+theta <- 7.2/100
+error <- Y- theta
+hist(error)
+se <- 2*sqrt(theta*(1-theta)/800)
+qqnorm(error/se)
+abline(0,1)
+```
+
+It's not even close! What's going on. Well our model is clearly wrong. The $\varepsilon$ do not appear to have the predicted expected value nor standard error.
+
+### Explaining variance
+
+In general we can see that the errors are not centered at 0 and have a much larger variability than expected:
+
+```{r}
+error <- tab$diff - 7.2/100
+hist(error)
+```
+
+What could explain this variability? 
+
+The first thing that comes to mind is that we polls are taken for over a year and the $\theta$ six months before the election might be different.
+
+#### Assessment
+
+Use ggplot to make a plot of the estimated difference versus day. What do you observe? Just form looking at the plot what would you say is that standard deviation of $\theta$ if we let it change with time?
+
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+tab %>% ggplot( aes(start_date, diff)) + geom_point() +
+  geom_hline(aes(yintercept=0))
+
+```
+
+The SD is at least 5%
+
+#### Assessment
+
+Take a look at polls that happened in 2008:
+
+```{r}
+tab %>% filter(start_date > "2008-01-01") %>%
+  ggplot( aes(start_date, diff)) + geom_point() +
+  geom_hline(aes(yintercept=0))
+```
+
+There seems to be clear time effect. We could amend the model to be
+
+$$
+Y_{t,i} = \theta + w_t + \varepsilon_{t,i}
+$$
+
+We now have two indexes $t$ denoting week and $i$ an index for the $i$-th poll during week $t$.
+
+### Smoothing
+
+To estimate the model above, we could go week by week and estimating $\theta_t = \theta + w_t$ separately. Our model for week $t$ would be
+
+
+$$
+Y_{t,i} = \theta_t + \varepsilon_{t,i}
+$$
+
+and we can use the same approach as before. We can compute the estimates using the `group_by` and `summarize` approach.
+
+#### `group_by` and `summarize`
+
+A very common operation performed in data analysis is to stratify data into groups and then obtain a summary statistic, such a mean and standard deviation, from each group. Here we want to group by week. So we simply do the following
+
+```{r}
+group_by(tab, week)
+```
+
+You can see that the 543 polls have been grouped into 72. Once this is done, if you call the `summarize` function it applies a summary to each group:
+
+```{r}
+group_by(tab, week) %>% summarize(avg=mean(diff))
+```
+
+We can make a quick plot
+
+```{r}
+group_by(tab, week) %>% summarize(avg=mean(diff)) %>% 
+  ggplot(aes(week, avg)) + geom_line() +
+  geom_hline(aes(yintercept=0))
+```
+
+Note that the number of polls per week varies:
+
+
+```{r}
+group_by(tab, week) %>% summarize(num_polls=n()) %>%
+  ggplot(aes(week, num_polls)) + geom_point()
+```
+
+
+Supposed we only want to consider weeks in which we had 10 or more polls. We can easily group and count like this. But now the table is summarized. We don't need to summarize it. We can `ungroup` at the end.
+
+
+```{r}
+group_by(tab, week) %>% mutate(num_polls=n()) %>% select(Pollster, num_polls) %>% ungroup
+```
+
+Which means we  can use this to filter. 
+
+```{r}
+group_by(tab, week) %>% mutate(num_polls=n()) %>% select(Pollster, num_polls) %>% filter(num_polls>=10) %>% ungroup %>% nrow
+```
+
+To make the plot for just these we can use:
+```{r}
+group_by(tab, week) %>% mutate(num_polls=n()) %>% 
+  filter(num_polls>=5) %>% 
+  summarize(avg=mean(diff)) %>% 
+  ggplot(aes(week, avg)) + geom_line() +
+  geom_hline(aes(yintercept=0))
+
+```
+
+
+### Assessment
+
+Make the same plot to add bars that show 2 SD above and below the average. Answer the questions below.
+
+
+```{r}
+group_by(tab, week) %>% mutate(num_polls=n()) %>% 
+  filter(num_polls>=5) %>% 
+  summarize(avg=mean(diff) , sd=sd(diff)) %>% 
+  ggplot(aes(week, avg, ymin=avg-2*sd, ymax=avg+2*sd)) + 
+  geom_point() + geom_errorbar() +
+  geom_hline(aes(yintercept=0))+ 
+  geom_hline(aes(yintercept=0.072))
+```
+
+We saw earlier that as the elections got closer many more plots are conducted. But the plot above does not show the standard deviations decreasing. At least not at the rate of $1/\sqrt{\mbox{number of polls}}$. Why is this?
+
+A. The standard deviation is decreasing
+
+B. The standard deviation relates to the SE of each poll, which depends on poll size not number of polls
+
+C. There is a bug in the code
+
+D. I have no idea.
+
+A similar plot to this can be generated with
+```{r}
+filter(tab, start_date>"2008-01-01") %>% ggplot(aes(start_date, diff)) + geom_point() + geom_smooth(span=0.25) + geom_hline(aes(yintercept=0)) + 
+   geom_hline(aes(yintercept=0.072))
+```
+
+
+#### House Effect
+
+We have seen that there is a strong weekly effect. We saw how we could control it by, for example, stratifying the analysis. We noted that the last couple of weeks provides the original model may be "useful".
+
+$$ 
+Y_i = \theta + \varepsilon_i
+$$
+
+
+Now if we restrict ourselves to polls with sample sizes larger than 2,000, the the theory tells us that the standard error for the estimate of the percentage for Obama is $\hat{p}$ (notation from previous section) is 
+
+$$\sqrt{ p (1 - p)} / \sqrt{2000}$$
+
+Here we are estimating the difference $\theta$. The estimated is approximated by $\hat{p} - (1-\hat{p}) = 2\hat{p} - 1$. This implies that the standard error is $2 \sqrt{ p (1 - p)} / \sqrt{2000}$.
+
+Because each $Y_i$ a separate poll then the standard deviation of $\varepsilon$ should be about $2 \sqrt{ p (1 - p) }/ \sqrt{2000}$:
+
+```{r}
+2* sqrt(0.5*0.5) / sqrt(2000)
+```
+
+But the observed variance is slightly larger:
+
+```{r}
+tab %>% filter( N>2000 & week > -4) %>% summarize(sd(diff))
+```
+
+This could be due to what is referred to as the _house effect_. Note in the plot below how there appears to be a Pollster effect:
+
+```{r}
+tab %>% filter(week > -4) %>% group_by(Pollster) %>% filter(n()>4) %>% 
+  ggplot(aes(Pollster, diff , col=Pollster)) + geom_boxplot()
+```
+
+
+An improved model will include a pollster effect
+
+$$
+Y_{i,j} = \theta + p_{j} + \varepsilon_{i,j}
+$$
+
+with $p_{j}$ a pollster effect.
+
+In more formal statistics classes you can learn about analysis of variance which does confirm strong week effect and small, but statistical significant, house effect:
+
+```{r}
+tab2 <- filter(tab, start_date > "2008-01-01") %>% group_by(Pollster) %>% filter(n() > 10)
+fit <- lm(diff ~ week + Pollster, data=tab2)
+summary( aov(fit) )
+```
+
+
+

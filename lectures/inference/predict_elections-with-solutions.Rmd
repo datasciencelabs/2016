@@ -1,0 +1,690 @@
+---
+title: "Predicting Elections"
+output: html_document
+---
+
+## In-class questions: 3/7/2016
+
+If you have small technical questions during class, go to this 
+[link](https://docs.google.com/document/d/1Lz0NsFsgE9ZgKnIQrJp-kt2d3rx0xWRZB23-pdZpsfY/edit?usp=sharing) and ask away.
+
+
+## 2008 Presidential Election (Obama vs McCain)
+
+We are going to put together the concepts we have
+learned related to modeling polls. For this, we will
+continue to use the 2008 presidential election 
+as an example. We have previously shown how to scrape
+the data from 
+[this](http://www.pollster.com/08USPresGEMvO-2.html) web site.
+
+```{r}
+library(XML)
+theurl <- paste0("http://www.pollster.com/08USPresGEMvO-2.html")
+html_tables <- readHTMLTable(theurl,stringsAsFactors=FALSE)
+tab <- html_tables[[1]]
+```
+
+
+## Wrangling the data
+
+We have already discussed in detail how to scrape and wrangle
+this particular data set in the  
+[models.Rmd](https://github.com/datasciencelabs/2016/blob/master/lectures/models/models.Rmd) 
+in the 2016 GitHub repository. We used the `tidyr`, `stringr` and 
+`lubridate` packages. Here, I have combined all the steps from the 
+[models.Rmd](https://github.com/datasciencelabs/2016/blob/master/lectures/models/models.Rmd) 
+into one step. 
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+
+tab <- tbl_df(tab)
+tab <- tab %>% 
+            separate(col=Dates, into=c("start_date","end_date"), 
+                     sep="-", fill="right") %>% 
+            mutate(end_date = ifelse(is.na(end_date), start_date, end_date)) %>% 
+            separate(start_date, c("smonth", "sday", "syear"), sep = "/", 
+                    convert = TRUE, fill = "right") %>% 
+            mutate(end_date = ifelse(str_count(end_date, "/") == 1, 
+                                     paste(smonth, end_date, sep = "/"), end_date)) %>%
+            mutate(end_date = mdy(end_date)) %>% 
+            mutate(syear = ifelse(is.na(syear), year(end_date), syear + 2000)) %>% 
+            unite(start_date, smonth, sday, syear) %>% 
+            mutate(start_date = mdy(start_date)) %>% 
+            select(-Barr, -Nader, -Other, -Undecided, -Margin) %>% 
+            separate(`N/Pop`, into=c("N","population_type"), sep=" ", 
+                convert=TRUE, fill="left") %>% 
+            mutate(Obama = as.numeric(Obama)/100, 
+              McCain=as.numeric(McCain)/100,
+              diff = Obama - McCain,
+              day=as.numeric(start_date - mdy("11/04/2008")),
+              week = floor(day/7))
+```
+
+
+## Using Hierarchical Model to Predict Polls
+
+Last week, we introduced hierarchical models as a tool to estimate 
+the posterior distribution of the [batting average of Jose Iglesias](https://github.com/datasciencelabs/2016/blob/master/lectures/models/bayes.Rpres). 
+
+As a brief summary of using hierarchical models, 
+you build a model before seeing polls (the prior distribution):  
+$$
+\theta \sim N(\mu, \tau^2) 
+$$
+
+The you start seeing poll data (the sampling distribution):
+
+$$
+Y | \theta \sim N(\theta, \sigma^2) 
+$$
+
+We update our prediction (the posterior distribution):
+
+$$
+\begin{eqnarray*}
+\mbox{E}(\theta|y) &=&  \mu + (1-B)(Y-\mu)
+\mbox{ with }B &=& \frac{\sigma^2}{\sigma^2+\tau^2}\\
+\\
+\mbox{var}(\theta\mid y) &=& \frac{1}{1/\sigma^2+1/\tau^2}
+\end{eqnarray*}
+$$
+
+That is a lot information stuffed into three steps. 
+Let's break the steps down individually and apply the theory to 
+the 2008 Presidential Election poll data to see how it works.
+
+
+### Prior belief
+
+The first step is to define our *prior belief* that Obama will beat
+McCain. We define a model (*a prior*) before seeing polls for the 
+difference between `Obama` and `McCain` (which we define 
+as $\theta$):
+
+$$
+\theta \sim N(\mu, \tau^2) 
+$$
+
+To quantify this belief, we must define values for $\mu$
+and $\tau$. 
+
+#### Assessment 
+Say before seeing any poll data, you have no idea who is going to win.  
+What should $\mu$ be? What about $\tau$? 
+
+**Your answer here**:
+Because we have no prior idea who will win, the prior mean $\mu$ 
+should be 0. And again, we do not know anything about the data, so
+ $\tau$ should be big. 
+
+Now, let's assume we are part of the republican party and we 
+passionately believe that McCain will beat Obama. To quantify 
+this belief, we can say the distribution of $\theta$
+is normal with mean $\mu = -0.15$ and standard deviation
+$\tau = 5$.
+
+#### Assessment 
+Under your prior belief that McCain will beat Obama, 
+what is the probability that Obama will beat 
+McCain in the 2008 presidential election? 
+
+```{r}
+##Your code here
+
+mu_prior = -0.15
+tau_prior = 5
+1 - pnorm(0,mu_prior,tau_prior)
+```
+
+
+### Observed data (sampling distribution)
+
+[Last week, we learned about how we have been implicitly using linear models in this course](https://github.com/datasciencelabs/2016/blob/master/lectures/inference/models.pdf). 
+We have been doing this by trying to estimate the probability of tossing 
+a coin and observing a head, the proportion of blue beads in a jar, 
+the average height of a population, and the difference in the 
+proportion of votes two candidates, for example Obama and McCain, 
+will receive. The goal of using linear models is to try and estimate 
+some parameter $\theta$ by observing draws from a sampling model.  
+The first linear model we considered was: 
+
+$$ Y_i = \theta + \varepsilon_i, i = 1, ..., N$$
+
+where $Y_1, Y_2, \ldots, Y_N$ are the observed values with $N$ 
+total observations. Each observation has an *error* term $\varepsilon_i$
+that defines the difference between the true parameter value ($\theta$)
+and the observed value ($Y_i$). We assume that the expected value 
+of the error term is 0 and very often assume the 
+standard deviation is a contant $\sigma$. 
+
+Up until now, we have not used the poll data. We have 
+only made statements about our prior beliefs. 
+Now assume you start seeing the poll data. Let $Y$ be the 
+observed difference in the polls between Obama and McCain. 
+We define the sampling distribution as
+
+$$
+Y | \theta \sim N(\theta, \sigma^2/N) 
+$$
+
+where 
+
+* $Y$ is the observed difference in each poll between Obama and McCain
+* $\theta$ is the true difference in the polls on election night
+* $\sigma^2$ is the observed sample variance
+* $N$ is the number of polls we observe (i.e. each poll is an observation here)
+
+#### Estimate $\theta$
+
+Using our linear model defined above, we have seen how to use the 
+method called 
+[*least squares*](https://en.wikipedia.org/wiki/Least_squares), 
+which minimizes the least squares equation: 
+
+$$ \sum_{i=1}^N (Y_i - \theta)^2 $$
+
+to obtain the *least squares estimate* (LSE), which is basically a
+sample average of the individual observed polls: 
+
+$$ \hat{\theta} = \frac{1}{N}\sum_{i=1}^N Y_i = \bar{Y} $$
+
+Because this is a sample average from a sampling model, 
+we know its expectation is $\theta$ and it’s standard error is 
+$\sigma / N$ where $N$ is the number of observations 
+and $\sigma$ the standard deviation of the distribution of $\varepsilon$. 
+
+Now, what is $\sigma$? 
+
+#### Estimate $\sigma$ using Central Limit Theorem (theoretical) versus the sample standard deviation (empirical)
+
+We have learned that in the context of estimating the difference 
+in the polls between two presidentical candidates, we can use the 
+Central Limit Theorem (CLT) to model $\varepsilon$. According to the CLT,
+
+$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{2\sqrt{p (1-p)}}{\sqrt{n}}\right) $$
+
+where $p$ is the prorportion for Obama, $n$ is the poll size from a single 
+poll. This means statistical
+theory tells us the expected value of $\varepsilon$ is 0 and the 
+standard deviation $\sigma$ should be given by
+$\frac{2\sqrt{p (1-p)}}{\sqrt{n}}$. 
+
+Remember, if $p$ represented the percentage for just one 
+candidate (e.g. Obama), the statitical theory tells us that the 
+standard error for the estimate of the percentage for Obama is 
+
+$$ \frac{\sqrt{p (1-p)}}{\sqrt{n}} $$
+
+But if we are estimating the difference in percentages between two 
+candidates, then the estimate is approximated by 
+$\hat{\theta} = \hat{p} - (1-\hat{p}) = 2\hat{p} - 1$. 
+This implies that the standard error is $2 \sqrt{ p (1 - p)} / \sqrt{n}$.
+
+Because each $Y_i$ a separate poll then the standard deviation of 
+$\varepsilon$ should be about $2 \sqrt{ p (1 - p) }/ \sqrt{n}$:
+
+**Note, this theory is extremely useful when we just have one poll.**
+
+**However**, if we are fortunate enough to be able to observe mutliple 
+polls results (e.g. polls from different pollsters or polls from 
+different weeks over time), we can use the poll data directly 
+to estimate $\sigma$ (instead of using the statistical theory above). 
+The typical strategy is to use the sample standard deviation formula: 
+
+$$ s = \sqrt{ \frac{1}{N-1}\sum_{i=1}^N (Y_i - \bar{Y})^2} $$
+
+where $N$ is the total number of polls we observe. 
+
+**IMPORTANT**: Do not confuse the poll sample size $n$ with the 
+number of observations in our model above $N$. In the model above we
+treat each poll as a single observation and we observe $N$ polls. But
+it is important to keep in mind that each poll we observe had 
+a poll size associated with it (i.e. $n$). 
+
+
+
+
+### Explore the data to estimate $\theta$ and $\sigma$
+
+Next we are going to explore and use the 2008 presidential election 
+poll data to try and estimate $\theta$ and $\sigma$. 
+
+#### Assessment 
+Assume today is Jan 1, 2008. Use all the poll data 
+up until today to provide an estimate for $\theta$ 
+and an estimate of the standard deviation $\sigma$
+(empirically or from the data and not using 
+the statistical theory from the CLT).
+
+```{r}
+##Your code here.
+
+tab %>% 
+    filter(start_date<"2008-01-01") %>%
+    summarize(theta_hat = mean(diff), sigma_hat = sd(diff))
+```
+
+Last week, we also a scatter plot showing the number of polls 
+(y-axis) for each week (x-axis). 
+
+```{r}
+library(ggplot2)
+tab %>% 
+    group_by(week) %>% 
+    summarize(num_polls=n()) %>%
+    ggplot(aes(week, num_polls)) + geom_point()
+```
+
+Many of the polls 50 weeks prior to the election only had a handful of polls. 
+
+#### Assessment 
+In which weeks before the election were there 
+at least five or more polls in a given week. 
+
+```{r}
+##Your code here.
+
+tab %>% 
+    group_by(week) %>% 
+    summarize(num_polls=n()) %>% 
+    filter(num_polls >= 5)
+```
+
+#### Assessment 
+Assume today is 30 weeks away from the 2008 election. Extract 
+the polls that occurred between Jan 1, 2008 and 30 weeks prior
+to the election (i.e. Assume we do not trust any polls that 
+occurred too far out). Remove polls from weeks that do
+not have at least 5 polls. Provide an estimate for $\theta$
+called `theta_hat` and an estimate of the standard 
+deviation $\sigma$ called `sigma_hat`. In addition
+record the number of total number of polls and call 
+it `tot_poll`. We will use these estimates for our sampling
+distribution. Save your estimates into a table called `tabEst`.
+
+**Hint**: You will need to group the polls by week using 
+`group_by()`.  After you have filtered for the poll 
+criteria, use `ungroup()` before estimating the 
+mean and standard deviation. 
+
+
+```{r}
+##Your code here.
+
+tabEst <- tab %>% 
+    filter(start_date>"2008-01-01" & week <= -30) %>%
+    group_by(week) %>% 
+    mutate(num_polls=n()) %>%
+    filter(num_polls >= 5) %>% 
+    ungroup() %>% 
+    summarize(theta_hat = mean(diff), 
+              sigma_hat = sd(diff), 
+              tot_poll = n())
+tabEst
+```
+
+
+#### Assessment 
+Use the Central Limit Theorem to construct 
+a confidence interval for $\hat{\theta}$ using the empirical
+approach to estimate the standard deviation $\sigma$. 
+
+```{r}
+##Your code here
+
+tabEst$theta_hat + 
+    c(-1,1) * (tabEst$sigma_hat / sqrt(tabEst$tot_poll)) * qnorm(0.975)
+```
+
+#### Assessment
+
+Based on our sampling distribution, 
+what is the probability our interval includes the 
+true difference between Obama and McCain in 
+the 2008 presidential election? 
+
+```{r}
+##Your code here
+
+1 - pnorm(0, tabEst$theta_hat, 
+          tabEst$sigma_hat / sqrt(tabEst$tot_poll))
+```
+
+
+#### Compare the empirical estimate $\sigma$ to the theoretical estimate of $\sigma$ using Central Limit Theorem
+
+Until now, we have been using the sample standard deviation to estimate 
+$\sigma$ (i.e. empirically).  Now let's compare how the empirical estimate
+of $\sigma$ compares to the theoretical estimate of $\sigma$ using 
+the statistical theory that we've learned. 
+
+Let's filter the polls for only polls within 5 weeks of the 
+election and for polls that had a sample size of 1000.  We can use 
+boxplots to plot the distribution of the difference between 
+Obama and McCain stratified by pollster. 
+
+```{r}
+tab %>% 
+    filter(week>-5, N == 1000) %>%
+    ggplot(aes(Pollster, diff, fill=Pollster)) + geom_boxplot()
+```
+
+If you recall above, we discussed how use the statistical 
+theory from the Central Limit Theorem (CLT) to estimate 
+$\sigma$. According to the CLT, 
+
+$$ \varepsilon \sim \mbox{Normal}\left(0, \frac{2\sqrt{p (1-p)}}{\sqrt{n}}\right) $$
+
+where $n$ is the poll size. This means statistical
+theory tells us the expected value of $\varepsilon$ is 0 and the 
+standard deviation $\sigma$ should be given by
+$\frac{2\sqrt{p (1-p)}}{\sqrt{n}}$.
+
+#### Assessment 
+Use the poll data above (i.e. polls within 5 weeks of the 
+election and for polls that had a sample size of 1000), 
+estimate $\theta$ and $\sigma$ using the statistical 
+theory from the CLT. 
+
+```{r}
+##Your code here.
+
+tab %>% 
+    filter(start_date>"2008-01-01" & N == 1000) %>%
+    summarize(total_polls = n(), 
+              poll_size = unique(N),
+              theta_hat = mean(diff), 
+              sigma_hat_theoretical = 2*sqrt(mean(Obama)*(1-mean(Obama))) / sqrt(unique(N)))
+```
+
+
+#### Assessment 
+In contrast, use the poll data above (polls within 5 weeks of the 
+election and for polls that had a sample size of 1000) to 
+estimate $\sigma$ using the sample standard deviation. 
+
+$$ s = \sqrt{ \frac{1}{N-1}\sum_{i=1}^N (Y_i - \bar{Y})^2} $$
+
+How does it compare to the estimate of $\sigma$ above using the CLT? 
+
+```{r}
+##Your code here.
+
+tab %>% 
+    filter(start_date>"2008-01-01" & N == 1000) %>%
+    summarize(total_polls = n(), 
+              poll_size = unique(N), 
+              theta_hat = mean(diff), 
+              sigma_hat_theor = 2*sqrt(mean(Obama)*(1-mean(Obama))) / sqrt(unique(N)), 
+              sigma_hat_emp = sd(diff))
+```
+
+### Why does the theory not match what we see in the data? 
+
+In general, if the model is a good fit to the data, the 
+empirical estimate of $\sigma$ should match what the 
+the statistical theory says it should be. Recall this is our model: 
+
+$$ Y_i = \theta + \varepsilon_i, i = 1, ..., N$$
+
+Instead, we see the empirical estimate of $\sigma$ 
+is larger than what the theory says it should be.
+Why is this?? 
+
+Well, there are many possible reasons for this. 
+Let's consider three reasons: 
+
+#### 1. Time effect 
+One possible reason is that if there is a strong 
+time (or "week") effect, then there is extra variability in the 
+data that is not being accounted for in the model. 
+
+```{r}
+tab %>%
+    ggplot(aes(end_date, diff)) + geom_point() + 
+        geom_smooth(span=0.5) + geom_hline(aes(yintercept=0)) + 
+        geom_hline(aes(yintercept=0.072))
+```
+
+We could modify the model to include another term $w_t$ that 
+represents the time (or "week") effect. 
+
+$$ Y_{t,i} = \theta + w_t + \varepsilon_{t,i} $$
+
+**Note**: We now have two indexes $t$ denoting week and
+$i$ an index for the $i$-th poll during week $t$.
+
+By including this extra term in our model, we are 
+saying that the variability observed in the polls 
+does not just come from $\varepsilon$. We are 
+saying there is extra or additional variabilty from
+time that we are ignoring. 
+
+We can model the time effects $w_t$ by making 
+assumptions about the expected value 
+and variance of of $w_t$. For example, we could 
+model this as a fixed effect and estimate it, for 
+example, [loess](https://en.wikipedia.org/wiki/Local_regression). 
+This is not that useful for forecasting as we don't 
+know if the trend will continue. More useful is 
+to model it as a random effect with its variance 
+depending on days left to the election (e.g. a model 
+with a decreasing variance as the weeks get closer 
+to the election.
+
+To incorporate information about the time effect, 
+we an use the fact that we see the variance 
+in the difference between Obama and McCain decreases 
+as we get closer to election night.  
+
+If we are 10 weeks away from election night, you can get an
+idea of the standard deviation of $w_t$ by looking at 10 weeks prior on
+previous elections. In previous elections we observe $\theta$ so we
+can actually observe $w_t$ + $\varepsilon$. We can 
+observe the this for several weeks and
+notice that it gets smaller and smaller as the election gets closer.
+
+
+#### 2. House effect 
+Another possible reason is from what's called 
+a *house effect* or pollster effect. If there was no pollster
+effect, we would expect the distributions (or boxplots)
+of the difference between Obama and McCain to be similar.  
+
+```{r}
+tab %>% 
+    filter(week > -4) %>%
+    group_by(Pollster) %>% 
+    filter(n()>4) %>% 
+    ggplot(aes(Pollster, diff , fill=Pollster)) + geom_boxplot()
+```
+
+We see that each pollster has a different distribution in the
+difference between Obama and McCain. We could modify the model 
+to include another term $p_j$ that represents the 
+pollster effect. 
+
+$$ Y_{t,i,j} = \theta + w_t + p_{j} + \varepsilon_{t,i,j} $$
+
+where $p_{j}$ a pollster effect for the $j^{th}$ pollster. 
+By including this extra term in our model, we are 
+saying that the variability observed in the polls 
+does not just come from $\varepsilon$. We are 
+saying there is extra or additional variabilty from
+the pollsters.  
+
+We can model the pollster specific effects $p_j$ by making 
+an assumption about the expected value of $p_j$ 
+(e.g. $\mbox{E}(p_j)=0$) and we can model the 
+pollster specific effects to have different variances. 
+To estimate these we can use previous election data. 
+With these in place, we can construct weighted estimates
+for $\theta$ that better estimate the variablity. 
+
+
+#### 3. General biases
+
+The last possible reason we'll consider here is from 
+what are called *general biases* that have not been 
+accounted for. Specifically, our assumption that 
+$\mbox{E}(p_j)=0$ is incorrect. This assumption says that,
+on average, pollsters are not biased, but this is not the
+case. Instead we need to add a general bias to the model
+
+$$Y_{t,i,j} = \theta + w_t + p_j + b + \varepsilon_{t,i,j}.$$
+
+But note we cannot estimate $b$ from the data: this 
+model is not identifiable. However, we can model $b$ 
+as a random effect with and estimate its variance from 
+past elections where we know $\theta$. 
+
+
+### Posterior distribution
+
+The last step in the hierarchical model is to obtain a 
+posterior distribution. This means we will combine 
+our prior belief with our sampling distribution to 
+update our prediction of Obama beating
+McCain. To do this, we will use the formulas we 
+learned last week: 
+
+$$
+\begin{eqnarray*}
+\mbox{E}(\theta|y) &=&  B\mu+ (1-B)Y \\
+& & \mbox{ where } B = \frac{1/\tau^2}{N/\sigma^2+1/\tau^2}\\
+\\
+\mbox{var}(\theta\mid y) &=& (1-B)\sigma^2/N
+\end{eqnarray*}
+$$
+
+Note that there are lots of equivalent ways to write $B$, 
+but this one shows that it is a precision weight, 
+based on the ratio of the prior precision to the 
+total precision of the prior and the data. 
+Precision here is the inverse of the variance. 
+
+Equivalently,
+$$
+\begin{eqnarray*}
+\mbox{E}(\theta|y) &=&  B\mu+ (1-B)Y \\
+& & \mbox{ where } B = \frac{1/\tau^2}{N/\sigma^2+1/\tau^2}\\
+\\
+\mbox{var}(\theta\mid y) &=& \frac{1}{N/\sigma^2+1/\tau^2}
+\end{eqnarray*}
+$$
+
+#### Assessment
+
+Combine the prior distribution with the sampling distribution to 
+estimate the mean and standard deviation of the 
+posterior distribution for $\theta$. 
+
+```{r}
+##Your code here. 
+
+mu_prior
+tau_prior
+tabEst
+
+N <- tabEst$tot_poll
+B <- (1/tau_prior^2) / (N / tabEst$sigma_hat^2 + 1/tau_prior^2)
+sd_post <- sqrt( (1 / tau_prior^2 + N / tabEst$sigma_hat^2)^(-1) )
+mu_post <- mu_prior * B + tabEst$theta_hat * (1-B)
+mu_post
+sd_post
+```
+
+Use the posterior distribution, estimate 
+the probability of Obama beating McCain in the 
+2008 Presidential election. 
+
+```{r}
+##Your code here
+
+1 - pnorm(0, mu_post, sd_post)
+```
+
+
+
+### Monte Carlo simulation to generate election results
+
+Now we will use the posterior distribution in a Monte Carlo 
+simulation to generate election results. In each simulation, 
+we will simulate data from the posterior distribution and 
+compute the probability of Obama beating McCain. 
+This a histogram of these results.
+
+First, let's simulate data from the posterior distribution for one observation. 
+Keep in mind, we are simulating the difference between Obama and McCain.
+```{r}
+rnorm(1,mu_post,sd_post)
+```
+
+Next, let's simulate data from the posterior distribution for $N$ observations. 
+```{r}
+N = 100
+set.seed(1234)
+qplot(rnorm(N,mu_post,sd_post), geom = "histogram", bins = 20, 
+      xlab = "difference between Obama and McCain")
+```
+
+We see that in some cases the difference is below 0, but the distribution
+is centered at `mu_post`. We can count the number of times Obama beat
+McCain from our observations generated from the posterior distribution. 
+
+```{r}
+N = 100
+set.seed(1234)
+mean(rnorm(N,mu_post,sd_post) > 0)
+```
+
+Now let's put it all together in a Monte Carlo simuation to generate 
+election results. 
+
+```{r}
+N = 100 
+B = 1e4
+results <- replicate(B, {
+    X <- mean(rnorm(N,mu_post,sd_post) > 0)
+})
+qplot(results, geom = "histogram", bins = 20, 
+      xlab = "Probability that Obama beats McCain") + 
+    geom_vline(aes(xintercept = mean(results), color = "red")) + 
+    geom_vline(aes(xintercept = 1 - pnorm(0, mu_post, sd_post), color = "blue")) 
+
+mean(results)
+1 - pnorm(0, mu_post, sd_post)
+```
+
+#### Assessment
+Next, assume there is a general poll bias that 
+is a random variable. It can go either way. 
+How can you add this to your simulation? 
+How does it affect the distribution?
+
+```{r}
+##Your code here.
+
+N = 100 
+B = 1e4
+biassd = 0.005
+results <- replicate(B, {
+    X <- mean( (rnorm(N,mu_post,sd_post) + 
+                rnorm(1, 0, biassd))> 0)
+})
+qplot(results, geom = "histogram", bins = 20, 
+      xlab = "Probability that Obama beats McCain", 
+      main = "with a general poll bias") + 
+    geom_vline(aes(xintercept = mean(results), color = "red")) + 
+    geom_vline(aes(xintercept = 1 - pnorm(0, mu_post, sd_post), color = "blue")) 
+
+mean(results)
+1 - pnorm(0, mu_post, sd_post)
+```
+
+

@@ -1,0 +1,669 @@
+---
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+library(gganimate)
+library(readr)
+library(knitr)
+library(broom)
+```
+
+## Smoothing
+
+Smoothing is a very powerful technique used all across data analysis. It is designed to estimate $f(x)$ when the shape is unknown, but assumed to be _smooth_.  The general idea is to group data points into strata that are expected to have similar expectations and compute the average  or fit a simple model in each strata. We will use the 2008 presidential election polls.
+
+```{r, echo=FALSE}
+library(stringr)
+library(lubridate)
+library(tidyr)
+library(XML)
+theurl <- paste0("http://www.pollster.com/08USPresGEMvO-2.html")
+polls_2008 <- readHTMLTable(theurl,stringsAsFactors=FALSE)[[1]] %>%
+  tbl_df() %>% 
+  separate(col=Dates, into=c("start_date","end_date"), sep="-",fill="right") %>% 
+  mutate(end_date = ifelse(is.na(end_date), start_date, end_date)) %>% 
+  separate(start_date, c("smonth", "sday", "syear"), sep = "/",  convert = TRUE, fill = "right")%>% 
+  mutate(end_date = ifelse(str_count(end_date, "/") == 1, paste(smonth, end_date, sep = "/"), end_date)) %>% 
+  mutate(end_date = mdy(end_date))  %>% mutate(syear = ifelse(is.na(syear), year(end_date), syear + 2000)) %>% 
+  unite(start_date, smonth, sday, syear)  %>% 
+  mutate(start_date = mdy(start_date)) %>% 
+  separate(`N/Pop`, into=c("N","population_type"), sep="\ ", convert=TRUE, fill="left") %>% 
+  mutate(Obama = as.numeric(Obama)/100, 
+         McCain=as.numeric(McCain)/100,
+         diff = Obama - McCain,
+         day=as.numeric(start_date - mdy("11/04/2008"))) 
+```
+
+```{r}
+polls_2008
+```
+
+
+For each day starting June 1, 2008 we compute the average of polls that started that day. We will denote this predicted difference with $Y$ and the days with $X$. Below we create and plot this dataset and fit a regression line. 
+
+```{r, fig.align="center", fig.width=10.5,fig.height=5.25}
+dat <-  filter(polls_2008, start_date>="2008-06-01") %>% 
+  group_by(X=day)  %>% 
+  summarize(Y=mean(diff))
+
+dat %>% ggplot(aes(X, Y)) + geom_point() + geom_smooth(method = "lm", se = FALSE)
+```
+
+Note that we model $f(x) = \mbox{E}(Y \mid X=x)$ with a line we do not appear to describe the trend very well. Note for example that on September 4 (day -62) the Republican Convention was held. This gave McCain a boost in the polls which can be clearly seen in the data. The regression line does not capture this.
+
+To see this more clearly we note that points above the fitted line (green) and those below (purple) are not evenly distributed. We therefore need an alternative more flexible approach.
+
+```{r, fig.width=10.5,fig.height=5.25}
+resids <- ifelse(lm(Y~X, data=dat)$resid >0, "+", "-")
+dat %>% mutate(resids=resids) %>% 
+  ggplot(aes(X, Y)) + 
+  geom_point(cex=5,pch=21) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point(aes(X,Y,color=resids), cex=4)
+```
+
+We will explore  ways of estimating $f(x)$ that do not assume it is linear.
+
+## Bin Smoothing
+
+Instead of fitting a line, let's go back to the idea of stratifying and computing the mean. This is referred to as _bin smoothing_. The general idea is that the underlying curve does not vary wildly, what we refer to as _smooth_. If the curve is enough then in small bins, the curve is approximately constant. If we assume the curve is constant, then all the $Y$ in that bin have the same expected value. For example, in the plot below, we highlight points in a bin centered at day -125  as well as the points of a bin centered at day -55 , if we use bins of a week. We also show the fitted mean values for the $Y$ in those bins with dashed lines (code not shown):
+
+```{r binsmoother,fig.width=10.5,fig.height=5.25,echo=FALSE}
+span <- 7
+dat2 <- dat %>%
+  inflate(center = unique(dat$X)) %>%
+  mutate(dist = abs(X - center)) %>%
+  filter(dist <= span) %>%
+  mutate(weight =  1)
+
+dat2 %>% filter(center %in% c(-125, -55)) %>%
+  ggplot(aes(X, Y)) +   
+  geom_point(aes(alpha = weight)) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), 
+              method = "lm", formula=y~1, se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat)
+```
+
+
+By computing this mean for bins around every point, we form an estimate of the underlying curve $f(x)$. Below we show the procedure happening as we move from the smallest value of $X$ to the largest.
+
+```{r, echo=FALSE}
+mod <- ksmooth(dat$X, dat$Y, kernel="box", bandwidth = span)
+bin_fit <- data.frame(X=dat$X, .fitted=mod$y)
+
+p <- ggplot(dat2, aes(X, Y)) +
+  geom_point(aes(alpha = weight, frame = center),cex=5) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), 
+              method = "lm", formula=y~1, se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat, alpha = .5,cex=5) +
+  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE), data = bin_fit, color = "red") + ggtitle("x0 = ")
+
+gg_animate(p, "binsmoother1.gif", ani.width = 1050, ani.height = 525, interval=0.15)
+```
+
+![bin_smoother1](binsmoother1.gif)
+
+
+The final result looks like this (code not shown):
+
+```{r, fig.width=10.5,fig.height=5.25, fig.align="center"}
+mod <- ksmooth(dat$X, dat$Y, kernel="box", bandwidth = span)
+bin_fit <- data.frame(X=dat$X, .fitted=mod$y)
+ggplot(dat, aes(X, Y)) +
+    geom_point(cex=5) + geom_line(aes(x=X, y=.fitted),
+                             data=bin_fit, color="red")
+```
+
+#### Kernels  
+
+Note that the final project is quite wiggly. One reason for this is that each time the window moves 2 points change. We can attenuate this somewhat by taking weighted averages that give the center point more weight and far away less points.
+
+In this animation we see that points on the edge get less weight:
+```{r,echo=FALSE}
+dat2 <- dat %>%
+  inflate(center = unique(dat$X)) %>%
+  mutate(dist = abs(X - center)) %>%
+  filter(dist <= span) %>%
+  mutate(weight =  dnorm(dist,0,span/2.54))%>%
+  mutate(weight = weight/max(weight))
+
+mod <- ksmooth(dat$X, dat$Y, kernel="normal", bandwidth = span)
+bin_fit2 <- data.frame(X=dat$X, .fitted=mod$y)
+
+p <- ggplot(dat2, aes(X, Y)) +
+  geom_point(aes(alpha = weight, frame = center),cex=5) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), 
+              method = "lm", formula=y~1, se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat, alpha = .5,cex=5) +
+  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE),data = bin_fit2,color ="red") +
+  ggtitle("x0 = ")
+
+gg_animate(p, "binsmoother2.gif", ani.width = 1050, ani.height = 525, interval=0.15)
+```
+
+![bin_smoother2](binsmoother2.gif)
+
+Note that the estimate is smoother now.
+
+```{r,fig.width=10.5,fig.height=5.25, fig.align="center"}
+mod <- ksmooth(dat$X, dat$Y, kernel="normal", 
+               bandwidth = span)
+bin_fit2 <- data.frame(X=dat$X, .fitted=mod$y)
+
+ggplot(dat, aes(X, Y)) +
+    geom_point(cex=5) + geom_line(aes(x=X, y=.fitted), data=bin_fit2, color="red")
+```
+
+There are several functions in R that implement bin smoothers. One example is `ksmooth` shown above. However, in practice, we typically prefer methods that use slightly more complex models than fitting a constant. The final result above, for example, is still somewhat wiggly. Methods such as `loess`, which we explain next, improve on this.
+
+## Loess
+
+
+Local weighted regression (loess) is similar to bin smoothing in principle. The main difference is that we approximate the local behavior with a line or a parabola. This permits us to expand the bin sizes, which stabilizes the estimates. Below we see lines fitted to two bins that are slightly larger than those we used for the bin smoother (code not shown). We can use larger bins because fitting lines provide slightly more flexibility.
+
+
+
+As we did for the bin smoother, we show 12 steps of the process that leads to a loess fit (code not shown):
+
+
+```{r  fig.width=10.5,fig.height=5.25, fig.align="center"}
+span <- 0.05
+
+dat2 <- dat %>%
+  inflate(center = unique(dat$X)) %>%
+  mutate(dist = abs(X - center)) %>%
+  filter(rank(dist) / n() <= span) %>%
+  mutate(weight = (1 - (dist / max(dist)) ^ 3) ^ 3)
+
+
+dat2 %>% filter(center %in% c(-125, -55)) %>%
+  ggplot(aes(X, Y)) +   
+  geom_point(aes(alpha = weight)) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), 
+              method = "lm", se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat) 
+```
+
+Note that now that we are fitting lines instead of constant, we can fit lines to larger windows
+
+```{r , echo=FALSE, fig.width=10.5,fig.height=5.25, fig.align="center"}
+span <- 0.15
+
+dat2 <- dat %>%
+  inflate(center = unique(dat$X)) %>%
+  mutate(dist = abs(X - center)) %>%
+  filter(rank(dist) / n() <= span) %>%
+  mutate(weight = (1 - (dist / max(dist)) ^ 3) ^ 3)
+
+
+dat2 %>% filter(center %in% c(-125, -55)) %>%
+  ggplot(aes(X, Y)) +   
+  geom_point(aes(alpha = weight), cex=5) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), 
+              method = "lm", se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat,cex=5)
+```
+
+And then we fit a line locally at each point and keep the predicted value at that point:
+
+```{r, echo=FALSE}
+
+mod <- loess(Y~X, degree=1, span = span, data=dat)
+loess_fit <- augment(mod)
+
+p <- ggplot(dat2, aes(X, Y)) +
+  geom_point(aes(alpha = weight, frame = center),cex=5) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), method = "lm", se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat, alpha = .5,cex=5) +
+  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE), data = loess_fit, color = "red",lwd=1.5) +
+  ggtitle("x0 = ")
+
+gg_animate(p, "loess.gif", ani.width = 1050, ani.height = 525, interval=0.15)
+
+```
+
+![loess](loess.gif)
+
+There are three other important differences between `loess` and the typical bin smoother. The first  is that rather than keeping the bin size the same, `loess` keeps the number of points used in the local fit the same. This number is controlled via the `span` argument which expects a proportion. For example, if `N` is the number of data points and `span=0.5`, then for a given $x$ , `loess` will use the `0.5*N` closest points to $x$ for the fit. The second difference is that, when fitting the parametric model to obtain $f(x)$, `loess` uses weighted least squares, with higher weights for points that are closer to $x$. The third difference is that `loess` has the option of fitting the local model robustly. An iterative algorithm is implemented in which, after fitting a model in one iteration, outliers are detected and down-weighted for the next iteration. To use this option, we use the argument `family="symmetric"`.
+
+The final result is a smoother fit than the bin smoother since we use larger sample sizes to estimate our local parameters:
+
+```{r, fig.width=10.5,fig.height=5.25, fig.align="center"}
+mod <- loess(Y~X, degree=1, span = span, data=dat)
+loess_fit <- augment(mod)
+
+ggplot(dat, aes(X, Y)) +
+    geom_point(cex=5) + geom_line(aes(x=X, y=.fitted), data=loess_fit, color="red")
+```
+
+Note that different spans give us different smooths:
+
+```{r, echo=FALSE}
+spans <- c(.66, 0.25, 0.15, 0.10)
+
+fits <- data_frame(span = spans) %>% 
+  group_by(span) %>% 
+  do(augment(loess(Y~X, degree=1, span = .$span, data=dat)))
+
+dat2 <- dat %>%
+  inflate(span = spans, center = unique(dat$X)) %>%
+  mutate(dist = abs(X - center)) %>%
+  filter(rank(dist) / n() <= span) %>%
+  mutate(weight = (1 - (dist / max(dist)) ^ 3) ^ 3)
+
+p <- ggplot(dat2, aes(X, Y)) +
+  geom_point(aes(alpha = weight, frame = center), cex=3) +
+  geom_smooth(aes(group = center, frame = center, weight = weight), 
+              method = "lm", se = FALSE) +
+  geom_vline(aes(xintercept = center, frame = center), lty = 2) +
+  geom_point(shape = 1, data = dat, alpha = .5, cex=3) +
+  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE), data = fits, color = "red") +
+  facet_wrap(~span) +
+  ggtitle("x0 = ")
+
+gg_animate(p, "loesses.gif", ani.width = 1300, ani.height = 700, interval=0.15)
+
+```
+
+![loess](loesses.gif)
+
+Final
+```{r, fig.width=10.5,fig.height=10.25, fig.align="center" }
+spans <- c(.66, 0.25, 0.15, 0.10)
+
+fits <- data_frame(span = spans) %>% 
+  group_by(span) %>% 
+  do(augment(loess(Y~X, degree=1, span = .$span, data=dat)))
+
+ggplot(dat, aes(X, Y)) +
+  geom_point(shape=1,cex=3) +
+  geom_line(aes(x=X, y = .fitted, frame = X, cumulative = TRUE), data = fits, color = "red") +
+  facet_wrap(~span)
+```
+
+Note the `ggplot` uses loess in its `geom_smooth` function. But be careful with default behavior. The `ggplot`
+```{r, fig.width=10.5,fig.height=5.25, fig.align="center"}
+ggplot(dat, aes(X, Y)) +
+  geom_point(shape=1) + geom_smooth(color="red")
+```
+
+#### Multiple predictors
+
+Loess is a powerful tool when we have one predictor. But what if we have more than one? Note that we defined the concepts of windows. How do we define these windows when we have more than one covariate? What is a window when we have 784 predictors? To define this it is helpful to understand the concept or _distance_
+
+
+## Distance
+
+The concept of distance is quite intuitive. For example, when we cluster animals into subgroups, we are implicitly defining a distance that permits us to say what animals are "close" to each other.
+
+![Clustering of animals.](https://raw.githubusercontent.com/genomicsclass/labs/master/highdim/images/handmade/animals.png)
+
+Many of the analyses we perform with high-dimensional data relate directly or indirectly to distance. Many clustering and machine learning techniques rely on being able to define distance, using features or predictors. 
+
+## Euclidean Distance
+
+As a review, let's define the distance between two points, $A$ and $B$, on a Cartesian plane.
+
+```{r,echo=FALSE,fig.cap=""}
+library(rafalib)
+mypar()
+plot(c(0,1,1),c(0,0,1),pch=16,cex=2,xaxt="n",yaxt="n",xlab="",ylab="",bty="n",xlim=c(-0.25,1.25),ylim=c(-0.25,1.25))
+lines(c(0,1,1,0),c(0,0,1,0))
+text(0,.2,expression(paste('(A'[x]*',A'[y]*')')),cex=1.5)
+text(1,1.2,expression(paste('(B'[x]*',B'[y]*')')),cex=1.5)
+text(-0.1,0,"A",cex=2)
+text(1.1,1,"B",cex=2)
+```
+
+The euclidean distance between $A$ and $B$ is simply:
+
+$$\sqrt{ (A_x-B_x)^2 + (A_y-B_y)^2}$$
+
+
+## Distance in High Dimensions
+
+Earlier we introduced training dataset with feature matrix measurements for 784 features for 500 digits. 
+
+```{r, echo=FALSE, cache=TRUE}
+##Get the truth
+url <- "https://raw.githubusercontent.com/datasciencelabs/data/master/hand-written-digits-train.csv"
+digits <- read_csv(url)
+dat27 <- digits %>% filter(label%in%c(2,7))
+dat27 <- mutate(dat27, label =  as.character(label)) %>% 
+  mutate(y = ifelse(label=="2",0,1 ))
+row_column <- expand.grid(row=1:28, col=1:28)
+ind1 <- which(row_column$col <= 14 & row_column$row <=14)
+ind2 <- which(row_column$col > 14 & row_column$row > 14)
+ind <- c(ind1,ind2)
+X <- as.matrix(dat27[,-1])
+X <- X>200
+X1 <- rowSums(X[,ind1])/rowSums(X)
+X2 <- rowSums(X[,ind2])/rowSums(X)
+dat27 <- mutate(dat27, X_1 = X1, X_2 = X2)
+y <- as.factor(dat27$label)
+x <- cbind(X1, X2)
+library(caret)
+fit <- knn3(x, y, 401)
+GS <- 150
+X1s <- seq(min(X1),max(X1),len=GS)
+X2s <- seq(min(X2),max(X2),len=GS)
+true_f <- expand.grid(X_1=X1s, X_2=X2s)
+yhat <- predict(fit, newdata = true_f, type="prob")[,2]
+true_f <- mutate(true_f, yhat=yhat)
+f <- loess(yhat~X_1*X_2, data=true_f, 
+           degree=1, span=1/5)$fitted
+true_f <- true_f %>% mutate(f=f) 
+##create the training set
+set.seed(1)
+dat <- sample_n(dat27, 1000)
+library(caret)
+inTrain <- createDataPartition(y = dat$label,
+                               p=0.5)
+train_set <- slice(dat, inTrain$Resample1)
+test_set <- slice(dat, -inTrain$Resample1)
+```
+
+```{r}
+sample_n(train_set,10) %>% select(label, pixel351:pixel360) 
+```
+
+For the purposes of smoothing, we are interested in describing distance between observation , in this case digits. Later for the purposes of selecting features, we might also be interested in finding pixels that _behave similarly_ across samples.
+
+To define distance, we need to know what the points are since mathematical distance is computed between points. With high dimensional data, points are no longer on the Cartesian plane. Instead they are in higher dimensions. For example, observation $i$ is defined by a point in 784 dimensional space: $(Y_{i,1},\dots,Y_{i,784})^\top$. Feature $j$ is defined by a point in 500 dimensions $(Y_{1,j},\dots,Y_{500,j})^\top$
+
+Once we define points, the Euclidean distance is defined in a very similar way as it is defined for two dimensions. For instance, the distance between two observations, say observations $i=1$ and $i=2$ is:
+
+$$
+\mbox{dist}(1,2) = \sqrt{ \sum_{j=1}^{784} (Y_{1,j}-Y_{2,j })^2 }
+$$
+
+and the distance between two features, say, $15$ and $273$ is:
+
+$$
+\mbox{dist}(15,273) = \sqrt{ \sum_{i=1}^{500} (Y_{i,15}-Y_{i,273})^2 }
+$$
+
+
+#### Example
+
+The first thing we will do is create a _matrix_ with the predictors
+
+```{r}
+X <- select(train_set , pixel0:pixel783) %>% as.matrix()
+```
+
+Rows and columns of matrices can be accessed like this:
+
+```{r}
+thrid_row <- X[3,]
+tenth_column <- X[,10]
+```
+
+So the first to observations are 2s and the 253rd is a 7. Let's see if their distances match this:
+```{r}
+X_1 <- X[1,]
+X_2 <- X[2,]
+X_253 <- X[253,]
+sqrt(sum((X_1-X_2)^2))
+sqrt(sum((X_1-X_253)^2))
+```
+
+As expected, the 2 are closer to each other. If you know matrix algebra, note that a faster way to compute this is using matrix algebra:
+
+```{r}
+sqrt( crossprod(X_1-X_2) )
+sqrt( crossprod(X_1-X_253) )
+```
+
+Now to compute all the distances at once, we have the function `dist`. Because it computes the distance between each row, and here we are interested in the distance between samples, we transpose the matrix
+
+```{r}
+d <- dist(X)
+class(d)
+```
+
+
+Note that this produces an object of class `dist` and, to access the entries using row and column indices, we need to coerce it into a matrix:
+
+```{r}
+as.matrix(d)[1,2]
+as.matrix(d)[1,253]
+```
+We can quickly see an image of these distances
+
+```{r}
+image(as.matrix(d))
+```
+
+Note that for illustrative purposes we defined two predictors. Defining distances between observations based on these two covariates is much more intuitive since we can simply visualize the distance in a  two dimensional plot
+
+```{r}
+ggplot(train_set) + 
+  geom_point(aes(X_1, X_2, fill=label), pch=21, cex=5)
+```
+
+#### Distance between predictors
+
+Perhaps a more interesting result comes from computing distance between predictors:
+
+```{r}
+image(as.matrix(dist(t(X))))
+```
+
+
+## k Nearest Neighbors
+
+
+K-nearest neighbors (kNN) is similar to bin smoothing, but it is easier to adapt to multiple dimensions. We first define the distance between all observations based on the features.Basically, for any point $\bf{x}$ for which we want an estimate of $f(\bf{x})$, we look for the $k$ nearest points and then take an average of these points. This gives us an estimate of $f(x_1,x_2)$, just like the bin smoother gave us an estimate of a curve. We can now control flexibility through $k$. 
+
+Let's use our logistic regression as a straw man:
+
+```{r}
+library(caret)
+glm_fit <- glm(y~.,data = select(train_set, y, X_1, X_2) )
+f_hat <- predict(glm_fit, newdata = test_set, 
+                 type = "response")
+tab <- table(pred=round(f_hat), truth=test_set$y)
+confusionMatrix(tab)$tab
+confusionMatrix(tab)$overall["Accuracy"]
+```
+
+Now, lets compare to kNN. Let's start with the default $k=5$
+
+```{r}
+knn_fit <- knn3(y~.,data = select(train_set, y, X_1, X_2) )
+f_hat <- predict(knn_fit, newdata = test_set)[,2]
+tab <- table(pred=round(f_hat), truth=test_set$y)
+confusionMatrix(tab)$tab
+confusionMatrix(tab)$overall["Accuracy"]
+```
+
+This already improves over the logistics model. Let's see why this is:
+
+```{r, echo=FALSE, fig.width=10.5,fig.height=5.25, fig.align="center" }
+f_hat <- predict(knn_fit, newdata = true_f)[,2]
+g1 <- true_f %>% mutate(f_hat = f_hat) %>%
+  ggplot(aes(X_1, X_2, fill=f_hat))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D")) + geom_raster()  + guides(fill=FALSE) +  
+  stat_contour(aes(x=X_1,y=X_2,z=f_hat),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
+
+g2 <- ggplot(true_f) +  
+  geom_point(data=train_set, aes(x=X_1, y=X_2, fill=label), cex=5, pch=21) + stat_contour(aes(X_1,X_2,z=f_hat), breaks=c(0.5),color="black",lwd=1.5) 
+  
+library(gridExtra)
+grid.arrange(g1,g2, nrow=1)
+``` 
+
+When $k=5$, we see some islands of red in the blue area. This is due to what we call _over training_. Note how that we have higher accuracy in the train set compared to the test set:
+
+```{r}
+f_hat <- predict(knn_fit, newdata = test_set)[,2]
+tab <- table(pred=round(f_hat), truth=test_set$y)
+confusionMatrix(tab)$overall["Accuracy"]
+f_hat_train <- predict(knn_fit, newdata = train_set)[,2]
+tab <- table(pred=round(f_hat_train), truth=train_set$y)
+confusionMatrix(tab)$overall["Accuracy"]
+```
+
+## Over Training
+
+Over-training is at its worse when we set a $k=1$. In this case we ill obtain perfect accuracy in the training set because each point is used to predict itself. So perfect accuracy must happen by definition. However, the test set accuracy is actually worse than logistics regression.
+
+```{r}
+knn_fit_1 <- knn3(y~.,data = select(train_set, y, X_1, X_2), k=1)
+
+f_hat <- predict(knn_fit_1, newdata = train_set)[,2]
+tab <- table(pred=round(f_hat), truth=train_set$y)
+confusionMatrix(tab)$overall["Accuracy"]
+
+f_hat <- predict(knn_fit_1, newdata = test_set)[,2]
+tab <- table(pred=round(f_hat), truth=test_set$y)
+confusionMatrix(tab)$overall["Accuracy"]
+```
+
+We can see the over-fitting problem in this figure:
+```{r, echo=FALSE, fig.width=10.5,fig.height=5.25, fig.align="center" }
+f_hat <- predict(knn_fit_1, newdata = true_f)[,2]
+g1 <- true_f %>% mutate(f_hat = f_hat) %>%
+  ggplot(aes(X_1, X_2, fill=f_hat))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D")) + geom_raster()  + guides(fill=FALSE) +  
+  stat_contour(aes(x=X_1,y=X_2,z=f_hat),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
+
+g2 <- ggplot(true_f) +  
+  geom_point(data=train_set, aes(x=X_1, y=X_2, fill=label), cex=5, pch=21) + stat_contour(aes(X_1,X_2,z=f_hat), breaks=c(0.5),color="black",lwd=1.5) 
+  
+library(gridExtra)
+grid.arrange(g1,g2, nrow=1)
+``` 
+
+We can also go _over-smooth_. Look at what happens with 251 closes neighbors.
+
+```{r}
+knn_fit_251 <- knn3(y~.,data = select(train_set, y, X_1, X_2), k=251)
+f_hat <- predict(knn_fit_251, newdata = test_set)[,2]
+tab <- table(pred=round(f_hat), truth=test_set$y)
+confusionMatrix(tab)$overall["Accuracy"]
+```
+
+This turns out to be similar to logistic regression:
+```{r, echo=FALSE, fig.width=10.5,fig.height=5.25, fig.align="center" }
+f_hat <- predict(knn_fit_251, newdata = true_f)[,2]
+g1 <- true_f %>% mutate(f_hat = f_hat) %>%
+  ggplot(aes(X_1, X_2, fill=f_hat))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D")) + geom_raster()  + guides(fill=FALSE) +  
+  stat_contour(aes(x=X_1,y=X_2,z=f_hat),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
+
+g2 <- ggplot(true_f) +  
+  geom_point(data=train_set, aes(x=X_1, y=X_2, fill=label), cex=5, pch=21) + stat_contour(aes(X_1,X_2,z=f_hat), breaks=c(0.5),color="black",lwd=1.5) 
+  
+library(gridExtra)
+grid.arrange(g1,g2, nrow=1)
+``` 
+
+We can 
+
+```{r}
+control <- trainControl(method='cv', number=2, p=.5)
+dat2 <- mutate(dat, label=as.factor(label)) %>%
+  select(label,X_1,X_2)
+res <- train(label ~ .,
+             data = dat2,
+             method = "knn",
+             trControl = control,
+             tuneLength = 1, # How fine a mesh to go on grid
+             tuneGrid=data.frame(k=seq(3,151,2)),
+             metric="Accuracy")
+plot(res)
+```
+
+With k=11 we obtain what appears to be a decent estimate of the true $f$.
+
+```{r, echo=FALSE, fig.width=10.5,fig.height=5.25, fig.align="center" }
+knn_fit <- knn3(y~.,data = select(train_set, y, X_1, X_2),
+                k=11)
+f_hat <- predict(knn_fit, newdata = true_f)[,2]
+
+g1 <- true_f %>%
+  ggplot(aes(X_1, X_2, fill=f))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D")) + geom_raster()  + guides(fill=FALSE) +  
+  stat_contour(aes(x=X_1,y=X_2,z=f),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
+
+g2 <- true_f %>% mutate(f_hat = f_hat) %>%
+  ggplot(aes(X_1, X_2, fill=f_hat))  +
+  scale_fill_gradientn(colors=c("#00BFC4","white","#F8766D")) + geom_raster()  + guides(fill=FALSE) +  
+  stat_contour(aes(x=X_1,y=X_2,z=f_hat),data=true_f, breaks=c(0.5),color="black",lwd=1.5)
+ 
+library(gridExtra)
+grid.arrange(g1,g2, nrow=1)
+``` 
+
+An important part of data science is visualizing results to determine why we are succeeding and why we are failing.
+
+```{r, echo=FALSE}
+f_hat <- predict(knn_fit, newdata = test_set, k=11)[,2]
+
+high_prob_and_correct_2 <- which(f_hat<0.02 &
+                               test_set$label=="2")[1:5]
+high_prob_and_incorrect_2 <- which(f_hat<0.2 &
+                                   test_set$label=="7")[1:5]
+low_prob <-  which(abs(f_hat-0.5)<0.05)[1:5] 
+high_prob_and_incorrect_7 <- which(f_hat>0.75 &
+                                   test_set$label=="2")[1:5]
+high_prob_and_correct_7 <- which(f_hat>0.98 &
+                                   test_set$label=="7")[1:5]
+
+plot_it <- function(index){
+  tmp <- lapply( index, function(i){
+    expand.grid(Row=1:28, Column=1:28) %>%
+      mutate(id=as.character(i),
+             label=test_set$label[i],  
+             value = unlist(test_set[i,2:785])) 
+    })
+  tmp <- Reduce(rbind,tmp)
+  tmp  %>% ggplot(aes(Row, Column, fill=value)) + 
+      geom_raster() + 
+      scale_y_reverse() +
+      scale_fill_gradient(low="white", high="black") +
+      geom_vline(xintercept = 14.5) +
+    geom_hline(yintercept = 14.5) +  
+    facet_grid(.~id)
+}
+```
+
+Here are some 2 that were correctly called with high probability:
+```{r, echo=FALSE, fig.aling="center", fig.width=10}
+plot_it(high_prob_and_correct_2)
+```
+
+Here are some 2 that were incorrectly and had high probability:
+```{r, echo=FALSE, fig.aling="center", fig.width=10}
+plot_it(high_prob_and_incorrect_2)
+```
+
+Here are some for which the predictor was about 50-50
+```{r, echo=FALSE, fig.aling="center", fig.width=10}
+plot_it(low_prob)
+```
+
+Here are some 7 that were correctly called with high probability:
+
+```{r, echo=FALSE, fig.aling="center", fig.width=10}
+plot_it(high_prob_and_correct_7)
+```
+
+Here are some 2 that were incorrectly and had high probability:
+
+```{r, echo=FALSE, fig.aling="center", fig.width=10}
+plot_it(high_prob_and_incorrect_7)
+```
+

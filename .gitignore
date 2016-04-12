@@ -1,3 +1,2 @@
-.DS_Store
-homework/.DS_Store
-
+*.DS_Store
+*.Rhistory

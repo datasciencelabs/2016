@@ -1,0 +1,551 @@
+---
+title: "Money Ball"
+output: html_document
+---
+
+**This homework is due Sunday March 27, 2016 at 11:59PM EST. When complete, submit your code in an R Markdown file and the knitted HTML via GitHub.**
+
+# Introduction
+_Moneyball: The Art of Winning an Unfair Game_ is a book by Michael Lewis about the Oakland Athletics baseball team and its general manager, the person tasked with building the team, Billy Beane. During Billy Bean's tenure as general manager, ownership cut the budget drastically leaving Billy Bean with one of the lowest payrolls in baseball. Money Ball tells the story of how Billy Bean used analysts to find inefficiencies in the market. Specifically, his team used data science to find low cost players that the data predicted would help the team win. In this lab we will go back to 2002 and try to build a baseball team with a limited budget of $50,000,000. Note that in contrast to that Oakland A's, the Yankees had a [budget](http://www.baseballchronology.com/Baseball/Years/2002/Payroll.asp) of more than double: $125,000,000
+
+We will use the `Lahman` library as well as the usual `dplyr` and `ggplot2`. We also introduce the package `broom`.
+
+```{r, message=FALSE, warning=FALSE}
+library(Lahman)
+library(dplyr)
+library(ggplot2)
+library(broom)
+```
+
+You can see tables that are available when you load this package by typing
+
+```{r, eval=FALSE}
+?Lahman
+```
+
+
+# Problem 1 (80% of grade)
+
+Statistics have been used in baseball since its beginnings. Note that `Lahman` goes back to the 19th century. Batting average, for example, has been used to summarize a batter's success for decades. [Other statistics](http://mlb.mlb.com/stats/league_leaders.jsp) such as home runs, runs batted in (RBI) and stolen bases have been reported and players rewarded for high numbers. However, until [Bill James](https://en.wikipedia.org/wiki/Bill_James) introduced [sabermetrics](https://en.wikipedia.org/wiki/Sabermetrics), careful analyses had not been done to determine if these statistics actually help a team win. To simplify the exercise we will focus on scoring runs and ignore pitching and fielding. 
+
+## Problem 1A
+
+Use the data in the `Team` table to explore the relationship between stolen bases and runs per game in 1999. Make a plot, fit a regression line, and report the coefficients. If you take the coefficient at face value, how many more runs per game does a team score for every extra SB per game?
+
+
+```{r}
+theme_set(theme_bw())
+fit <- Teams %>%
+  filter(yearID == 1999) %>%
+  mutate(R = R / G, SB = SB / G) %>%
+  lm(R ~ SB, data = .) 
+Teams %>%
+  filter(yearID == 1999) %>%
+  mutate(R = R / G, SB = SB / G) %>% 
+  ggplot(aes(SB, R)) + 
+  geom_point() +
+  geom_abline(intercept = fit$coef[1],
+              slope = fit$coef[2])
+print(fit$coefficients[2])
+```
+
+## Problem 1B
+
+In Problem 1A we observed a positive relationship between scoring runs and stealing bases. However, the estimated coefficient is a random variable. Their is chance involved in scoring run. So how do we know if this observed relationship was not just chance variability?
+
+To examine the variability of this random variable we will consider each year to be a new independent outcome. Use the `lm` and `do` functions to fit a linear model to each year since 1961 (when they started playing 162 games per year). Hint: use the function `tidy` in `broom` to process the regression in each group so that it can be recombined (see [here](https://cran.r-project.org/web/packages/broom/vignettes/broom_and_dplyr.html) for examples).
+
+Using this approach what is your estimate of the random variable's standard error? Is the distribution of the random variable well approximated by a normal distribution? If so, use this to provide a 95% confidence interval for our effect of stolen bases on runs per game. Do you think stolen bases help score runs?
+
+```{r}
+res <- Teams %>% filter(yearID >= 1961) %>%
+  mutate(R = R / G, SB = SB / G) %>%
+  group_by(yearID) %>%
+  do(tidy(lm(R ~ SB, data = .))) %>%
+  filter(term == "SB")
+
+### ThE SE is:
+sd(res$estimate)
+##The CI is
+mean(res$estimate) + c(-1,1)*qnorm(0.975)*sd(res$estimate)
+qqnorm(res$estimate)
+qqline(res$estimate)
+```
+
+## Problem 1C
+Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval. Use the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. What are your thoughts now on the effectiveness of recruiting players that can steal bases?
+
+```{r}
+fit <- Teams %>%
+  filter(yearID == 1999) %>%
+  mutate(R = R / G, SB = SB / G) %>%
+  lm(R ~ SB, data = .) 
+
+# either
+res <- tidy(fit, conf.int = TRUE)
+res %>%
+  filter(term == "SB")
+
+# or
+res <- summary(fit)
+res$coef[2,1] + c(-1,1)*qnorm(0.975)*res$coef[2,2]
+```
+
+## Problem 1D
+
+Back in 2002, bases on balls (BB) did not receive as much attention as other statistics. Repeat the above analysis we performed for SB for BB per game. Do BB have larger effect on runs than SB?
+
+```{r}
+fit <- Teams %>%
+  filter(yearID == 1999) %>%
+  mutate(R = R / G, BB = BB / G) %>%
+  lm(R ~ BB, data = .)
+
+summary(fit)
+```
+
+
+## Problem 1E
+
+Association is not causation. It turns out that HR hitters also obtain many BB. We know for a fact that HRs cause runs because, by definition, they produce at least one. We can see this by simply plotting these two statistics for all players with more than 500 plate appearances (`BB+AB`):
+
+```{r}
+Batting %>%
+  filter(yearID >= 1961 & BB+AB > 500 & !is.na(HR) & !is.na(BB)) %>% 
+  mutate(HR = factor(pmin(HR, 40))) %>%
+  ggplot(aes(HR, BB)) +
+  geom_boxplot()
+```
+
+So is the relationship we saw above for BB and Runs due to teams having more HRs also having more BBs? One way we can explore this is by keeping HR fixed and examining the relationship within the strata. For example, if we only look only at teams with 150 home runs, do more BB produce more runs?
+
+We can't perform this analysis on a single year, because there are not enough teams to obtain strata with more than one or two teams. Instead we will combine all data years since 1961. 
+
+Group data by the number of HRs and perform a regression analysis in each stratum to determine the effect of BB per game on runs per game. Use 10th, 20th, ... quantiles to split the data into 10 groups. Hint: use the function `cut` and `quantile` to create the strata.
+
+```{r}
+my_data <- Teams %>%
+  filter(yearID >= 1961) %>% 
+  mutate(R = R / G, BB = BB / G, HR = HR / G) %>% 
+  mutate(group = cut(HR, quantile(HR, prob = seq(0, 1, .1)), include.lowest = TRUE))
+
+res <- my_data %>%
+  group_by(group) %>%
+  do(tidy(lm(R ~ BB, data = .))) %>%
+  filter(term == "BB")
+
+res
+## Visual inspection seems to show the relationship is linear in each strate
+my_data %>%
+  ggplot(aes(BB, R)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~group)
+```
+
+## Problem 1F
+
+In problem 1E we saw that the effect of BB on runs appears to be about the same in each strata. The relationship between HR and R is also, not surprisingly, linear:
+
+```{r}
+Teams %>%
+  filter(yearID >= 1961) %>% 
+  mutate(R = R / G, HR = HR / G) %>%
+  ggplot(aes(HR, R)) +
+  geom_point()
+```
+
+These two combined implies that a sensible linear model says:
+
+$$
+\mbox{Runs} = \beta_0 + \beta_{BB} \mbox{BB} + \beta_{HR}{HR} + \varepsilon
+$$
+
+In this model, we _adjust_ for HRs by including it as linear term. Note that we have already showed data that support this model. In general, simply fitting such a model does not necessarily adjust for a possible confounded. The model must be approximately correct.
+
+We can fit this model like this:
+
+```{r}
+fit <- Teams %>%
+  filter(yearID >= 1961) %>% 
+  mutate(R = R / G, BB = BB / G, HR = HR / G) %>%
+  lm(R ~ BB + HR, data = .)
+summary(fit)
+```
+
+Note that the summary shows a very strong HR effect but also a decent BB effect. Now what happens if we include Singles (`H-X2B-X3B-HR`), Extra bases (doubles `X2B` and triples `X3B`), and HR per game.
+What does the model say about which of these characteristics should receive more weight. Fit the model to each year independently to check for consistency from year to year. 
+
+```{r}
+fit <- Teams %>% filter(yearID>=1961) %>%  
+  mutate( R = R / G, BB = BB / G, 
+          Singles = (H - X2B - X3B - HR) / G,
+          XB = (X2B + X3B) / G, HR = HR / G) %>%
+  lm(R ~ BB + Singles + XB + HR, data = .)
+summary(fit)
+
+### You may want to check for consistency by year
+library(broom)
+Teams %>%
+  filter(yearID >= 1961) %>%
+  group_by(yearID) %>%
+  mutate(R = R / G, BB = BB / G, Singles = (H - X2B - X3B - HR) / G,
+         XB = (X2B + X3B) / G, HR = HR / G) %>%
+  do(tidy(lm(R ~ BB + Singles + XB + HR, data = .))) %>%
+  filter(!grepl("Intercept", term)) %>%
+  ggplot(aes(yearID, estimate, group = term, col = term)) +
+  geom_line() + 
+  geom_point()
+```
+
+
+# Problem 2 (20% of grade)
+
+In Problem 1 we learned how much BB, singles, extra base hits and home runs help predict runs. Now we want to see how much these costs. Note that batting average, Hits (H) divided by at bats (AB) receive much attention while bases on balls (BB) does not. However, we saw how BB have almost the same effect on runs as singles. Therefore, it is possible that players that receive many BB and do not hit many singles may be undervalued. Before studying this specific question, we will examine if teams can use money to improve.
+
+In general, does spending money help a teams win? Here we will compute the payroll for each team each year. This information is not directly provided. But we have the salary for each player and we also what team they played each year.
+
+Before we get started there is some data wrangling to be done. 
+
+```{r}
+## We can use ifelse if you have not seen the revalue function
+my_salaries <- Salaries %>%
+  mutate(teamID = as.character(plyr::revalue(teamID, c(SFG = "SFN", NYM = "NYN"))))
+```
+
+## Problem 2A
+
+Use the `mySalaries` data to compute each team's payroll, in millions of dollars, for each team during each year. Save this into an object called `payroll`. Hints: Group by team and year and then sum all salaries. As a sanity check make a plot of payroll against year with color representing teams. Payroll should be increasing with the New York Yankees (code NYA) having the largest payroll. Consider plotting salaries in the log-scale.
+
+```{r}
+payroll <- my_salaries %>%
+  group_by(yearID, teamID) %>%
+  summarize(payroll = sum(salary) / 10^6) %>%
+  ungroup()
+
+###Now look at the plot
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+
+payroll %>%
+  filter(yearID > 1987)%>%
+  ggplot(aes(x = yearID, y = payroll, color = teamID)) + 
+  scale_y_log10() +
+  geom_line()
+```
+
+
+## Problem 2B
+
+Now add the team's winning percentage, wins / (wins + losses) for each year to the `payroll` table. Hints: The `Teams` table has wins and losses for each team for each year. The `dplyr`  `join` functions permit you to join by two columns. 
+
+```{r}
+payroll  <- Teams %>% 
+  mutate(teamID = as.character(teamID), pct = W / (W + L)) %>% 
+  select(yearID, teamID, pct) %>% 
+  right_join(payroll, by = c("yearID", "teamID"))
+```
+
+
+## Problem 2C
+
+Explore the relationship between payroll and winning percentage. Use data visualization to describe what you think is the relationship. Hint: Make scatter plots for, say, 9 different years and add a regression line. 
+
+```{r}
+years <- round(c(seq(1985, 2014, len = 9)))
+payroll %>%
+  filter(yearID %in% years) %>% 
+  ggplot(aes(x = log2(payroll), y = pct)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  facet_wrap(~yearID, scales = "free")
+##In general: Winning pct grows with payroll 
+```
+
+
+## Problem 2D
+
+Use the `lm` function to fit a linear model to the 1999 data. Use the log-transform for the payroll data. According to this fitted model, on average, how many more wins does a team improve every time their budget doubles? Provide a 95% confidence interval.
+
+```{r}
+payroll <- mutate(payroll, wins = pct*162)
+fit <- payroll %>% 
+  filter(yearID == 1999) %>% 
+  lm(wins ~ log2(payroll), data= . )
+
+summary(fit)
+tidy(fit, conf.int = TRUE)
+## 10.3 +/- 5.7 more wins each time we double payroll
+```
+
+## Problem 2E 
+
+Did the Oakland A's outperform during the Money Ball era? Notice that after Oakland's original success, other teams started implementing their approach. If in fact they were over-performing then they were winning more than predicted by the regression model.
+
+Fit a linear model to the wins versus standardized data for each year. Then plot the residuals for Oakland. Make the same plot for the Boston Red Sox. (Hint: use the `augment` function from broom on each linear fit object to extract the residuals- look at the documentation for `augment.lm`). What do year do you think Oakland started using data science and when did other teams catch up? 
+
+```{r}
+library(broom)
+payroll_with_resid <- payroll %>%
+  group_by(yearID) %>%
+  do(augment(lm(wins ~ log2(payroll), data = . ), data = . )) %>%
+  ungroup()
+
+payroll_with_resid %>%
+  filter(teamID %in% c("BOS", "OAK")) %>% 
+  ggplot(aes(x = yearID, y = .resid)) +
+  facet_grid(~teamID) +
+  geom_point() +
+  geom_smooth(span = 0.66) +
+  geom_hline(aes(yintercept = 0))
+```
+
+## Problem 2F
+
+Since 2000 which team has performed the best over what was expected given their payroll?
+
+```{r}
+payroll_with_resid %>%
+  filter(yearID >= 2000) %>%
+  mutate(teamID = reorder(teamID, .resid, median)) %>%
+  ggplot(aes(teamID, .resid, color = teamID)) +
+  geom_boxplot() +
+  geom_hline(aes(yintercept = 0)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## Problem 2G
+
+For each of the BB, singles, extra bases, home runs and stolen bases per game how did Oakland rank in 2002?
+
+```{r}
+res <- Teams %>%
+  filter(yearID == 1999) %>%  
+  mutate(BB = BB / G, Singles = (H - X2B - X3B - HR) / G,
+         XB = (X2B + X3B) / G, HR = HR / G, SB = SB / G) %>%
+  select(teamID, BB, Singles, XB, HR, SB)
+
+# two possible solutions:
+library(tidyr)
+
+# or
+res2 <- apply(-res[,-1], 2, rank)
+rownames(res2) <- as.character(res[,1])
+res2
+##Note OAK was 1st in walks, 2nd in homeruns. Almost last in singles and SB.
+
+res3 <- res %>%
+  gather(metric, value, -teamID) %>%
+  group_by(metric) %>%
+  mutate(ranking = rank(-value))
+
+res3 %>%
+  filter(teamID == "OAK")
+```
+
+# Problem 3 (Bonus)
+
+Now we are going to build a baseball team for the 2002 season. We get to pick one of each of the 9 batting positions DH, C, 1B, 2B, 3B, SS, CF and two outfielders (OF, LF, or RF). We will pick players active in 2002 but you will have to pay each player whatever their maximum salary was during their entire career. You have a total of $50 million. Show us your team and how many runs you think they will produce. Note the number of runs per games of the best teams:
+
+```{r}
+Teams %>%
+  filter(yearID == 2012, lgID == "AL") %>%
+  mutate(runs_per_game = R / G) %>%
+  select(teamID, W, L, runs_per_game) %>%
+  arrange(desc(W))
+```
+
+Here is a possible answer:
+
+Start by taking players who's careers have ended by 2002 and started playing on 1961 or later. Then create new statistics of BB, Singles, extra bases, HR per plate appearance. A plate appearance is `AB + BB`.
+
+Like this:
+
+```{r}
+res <- Batting %>%
+  group_by(playerID) %>%
+  filter(max(yearID) <= 2002 & min(yearID) > 1961) %>%
+  mutate(PA = AB + BB) %>%
+  filter(sum(PA) > 1000) %>%
+  summarize(BB = sum(BB) / sum(PA),
+            Singles = sum(H - X2B - X3B - HR) / sum(PA),
+            XB = sum(X2B + X3B) / sum(PA),
+            HR = sum(HR) / sum(PA),
+            year = floor(median(yearID)))
+```
+
+Now add the max salary for each player and notice how much each of the above statistics roughly costs. Note that BB and extra base hits seem to be under valued. In the linear model below we include a year effect.
+
+```{r}
+res <- my_salaries %>%
+  group_by(playerID) %>% 
+  summarize(max_salary = max(salary) / 10^6) %>% 
+  inner_join(res, by = "playerID")
+
+lm(log2(max_salary)~ as.factor(year) + BB + Singles + XB + HR, data = res)
+```
+
+Now we create a `max_salary` table.
+
+```{r}
+max_salary <- my_salaries %>%
+  group_by(playerID) %>%
+  summarize(salary = max(salary))
+```
+
+And use aggregate statistics to build a predictor of runs produced for a team based exclusively on BB, singles, extra base hits, and HR. We did this above:
+
+```{r}
+fit <- Teams %>%
+  filter(yearID >= 1961) %>%  
+  mutate(R = R / G, BB = BB / G,
+         Singles = (H - X2B - X3B - HR) / G,
+         XB = (X2B + X3B) / G, HR = HR / G) %>%
+  lm(R ~ BB + Singles + XB + HR, data = .)
+```
+
+Now we can create a predicted runs for each player that answers the question: what happens if this player was the only hitter on the team? We focus on players with more than 400 plate appearances that played in 2002. We also assume that each team has 6000 plate appearances in each 162 game:
+
+```{r}
+pr <- Batting %>%
+  tbl_df %>%
+  filter(yearID == 2002 & AB + BB >= 400) %>% 
+  mutate(PA = BB + AB) %>%
+  mutate(BB = BB / PA * 6000 / 162,
+         Singles = (H - X2B - X3B - HR) / PA * 6000 / 162,
+         XB = (X2B + X3B) / PA * 6000 / 162, 
+         HR = HR / PA * 6000 / 162) %>%
+  mutate(runs_per_game = predict(fit, newdata = .)) %>%
+  select(playerID, BB, Singles, XB, HR, runs_per_game) %>%
+  left_join(max_salary, by = "playerID")
+```
+
+Now add other information:
+
+```{r}
+pr <- Master %>% select(playerID, nameFirst, nameLast) %>%
+  right_join(pr, by = "playerID")
+
+pr <- Fielding %>%
+  filter(yearID == 2002) %>% 
+  filter(POS != "P") %>% 
+  group_by(playerID) %>% 
+  summarize(POS = POS[which.max(G)]) %>% 
+  inner_join(pr, by = "playerID")
+
+pr %>%
+  mutate(POS = ifelse(POS %in% c("OF", "LF", "RF"), "OF", POS)) %>%
+  ggplot(aes(salary / 10 ^ 6, runs_per_game)) + 
+  geom_text(aes(label = nameLast)) + 
+  facet_wrap(~POS, scales = "free")
+```
+
+Now we use linear programming to maximize the number of runs, given that we must pick one of each position:
+
+```{r}
+library(reshape2)
+
+# position by player matrix for constraint: pick one for each pos
+constraint_matrix <- acast(pr, POS ~ playerID, fun.aggregate = length)
+npos <- nrow(constraint_matrix)
+# finally, constrain on salary.
+constraint_matrix <- rbind(constraint_matrix, salary = pr$salary)
+
+# positions must be exactly 1 of each, salary <= 50M
+constraint_dir <- c(rep("==", npos), "<=")
+constraint_limit <- c(rep(1, npos), 50e6)
+
+# solve 
+library(lpSolve)
+lp_solution <- lp("max", pr$runs_per_game,
+                  constraint_matrix, constraint_dir, constraint_limit,
+                  all.int = TRUE) # Can't have half a player
+
+# chosen players
+pr %>%
+  filter(lp_solution$solution == 1)
+
+pr %>%
+  filter(lp_solution$solution == 1) %>%
+  summarize(sum(salary), mean(runs_per_game))
+```
+
+(Adding in a designated hitter is more work but can be done).
+
+### Alternative ad-hoc solution 
+
+To evaluate how much extra value we get from a player we compute residuals:
+
+```{r}
+## residuals
+pr <- pr %>%
+  do(augment(lm(runs_per_game~salary, data=.), data=.)) %>%
+  select(-.fitted,-.se.fit, -(.hat:.std.resid)) %>%
+  rename(resid = .resid)
+```
+
+Now we implement an ad-hoc search algorithm:
+
+```{r}
+tmp <- pr %>% mutate(POS=ifelse(POS%in%c("OF","LF","RF"), "OF", POS))
+Max <- 50000000
+pos <- c("C", "1B","2B", "3B", "SS","CF","OF","OF")
+team <- c()
+payroll <- 0
+N <- 0 
+while(length(pos)>0){
+  is <- order(tmp$resid, decreasing = TRUE)
+  FLAG <- TRUE
+  count <- 0
+  must_leave <- tmp %>% group_by(POS) %>% 
+    summarize(min=min(salary)) %>% arrange(min) %>% slice(-1) %>%
+    summarize(sum(min)) %>% 
+    unlist
+  if(sum(pos=="OF")>1) {
+    must_leave <- must_leave + tmp %>% filter(POS=="OF") %>% 
+    arrange(salary) %>% slice(2) %>% .$salary
+  }
+  must_leave <- must_leave + min(pr$salary)
+  print(c(N, Max-payroll, must_leave,  min(tmp$salary)))
+  while(FLAG){
+    count <- count +1
+    i <- is[count]
+    if(payroll + tmp$salary[i] + must_leave <  Max ){
+      FLAG <- FALSE
+      N<-N+1
+      team <- c(team,paste(tmp$playerID[i]))
+      payroll <- payroll + tmp$salary[i] 
+      pos <- pos[-match(tmp$POS[i],pos)]
+    }
+  }
+  if(!tmp$POS[i]%in%pos) 
+    tmp <- filter(tmp, POS!=tmp$POS[i])
+  tmp <- filter(tmp, !playerID%in%team)
+}
+### Now add a DH
+tmp <- pr %>% filter(!playerID%in%team)
+is <- order(tmp$runs_per_game, decreasing = TRUE)
+while(FLAG){
+  count <- count +1
+  i <- is[count]
+  if(payroll + tmp$salary[i] <=  Max ){
+    FLAG <- FALSE
+    team <- c(team,paste(tmp$playerID[i]))
+    payroll <- payroll + tmp$salary[i] 
+  }
+}
+```
+
+And here is our team:
+```{r}
+filter(pr, playerID%in%team) %>% summarize(mean(runs_per_game))
+##compared to:
+Teams %>% filter(yearID==2012 & lgID=="AL") %>% 
+mutate(runs_per_game=R/G) %>% select(teamID, W,L,runs_per_game) %>% arrange(desc(W))
+```
+
+
+
+
+
+

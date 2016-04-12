@@ -1,0 +1,166 @@
+---
+layout: page
+title: Matrices in R
+---
+
+```{r}
+x_1 <- c(1,0,0,1)
+x_2 <- c(2,4,6,3)
+x_3 <- c(6,4,2,4)
+X <- cbind(x_1, x_2, x_3)
+X
+```
+
+Alternatively
+
+```{r}
+X <- matrix( c(x_1, x_2, x_3), nrow=4, ncol=3)
+X
+```
+
+We can extract specific entries using the `[` character:
+
+```{r}
+X[2,3]
+```
+
+We can extract columns like this:
+
+```{r}
+X[,c(1,2)]
+```
+
+and rows like this:
+
+```{r}
+X[c(2,3),]
+```
+
+Be aware that if you select one column or one row, the result is no longer a matrix but a numeric.
+
+```{r}
+X[,1]
+class(X[,2:3])
+class(X[,1])
+```
+However, we can preserve the matrix class by using the argument `drop`
+
+```{r}
+X[,1,drop=FALSE]
+```
+
+
+Useful function:
+
+```{r}
+rowMeans(X)
+```
+
+```{r}
+colMeans(X)
+```
+
+Also in the matrixStats package:
+
+```{r}
+library(matrixStats)
+colSds(X)
+colRanks(X)
+```
+
+and many other useful functions.
+
+We can apply any function to the rows using apply
+
+```{r}
+apply(X,1,mean) ##same as rowMeans
+```
+
+or the columns
+
+
+```{r}
+apply(X,2,mean) ##same as rowMeans
+```
+
+We can also define our own
+
+```{r}
+apply(X,2,function(x){
+  c(sum(x[1:2]), sum(x[3:4]))
+})
+```
+
+One very powerful approach  in it's simplicty and speed is to filter columns based on statistics of those columns:
+
+```{r}
+X[ , colMeans(X)>3]
+```
+
+We can also do thigs like this:
+
+```{r}
+X[X<1] <- 0.5
+X
+```
+
+or like this
+
+```{r}
+X[2,3]<-NA
+X[is.na(X)] <- 0
+X
+```
+
+We can also use this nice trick:
+
+```{r}
+X - rowMeans(X)
+```
+
+we can scale each row like this:
+
+```{r}
+(X - rowMeans(X)) /sd(X)
+```
+
+but be careful, it does not work for columns. for columns do this
+
+```{r}
+sweep(X, 2, colMeans(X))
+```
+or
+```{r}
+t( t(X) - colMeans(X) )
+```
+
+
+Finally, if you know linear algebra, you the transpose:
+```{r}
+t(X)
+```
+
+matrix multiplication:
+```{r}
+t(X) %*% X
+```
+
+crossproduct
+
+```{r}
+crossprod(X)
+```
+
+inverse
+```{r}
+solve( crossprod(X))
+```
+
+QR decomposition
+
+```{r}
+qr(X)
+```
+
+
+
