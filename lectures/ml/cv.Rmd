@@ -120,8 +120,10 @@ keep_columns <- which(column_means>10)
 Let's define the training data and test data:
 
 ```{r}
-train_set <- slice(dat, inTrain) %>% select(label, keep_columns+1)
-test_set <- slice(dat, -inTrain) %>% select(label, keep_columns+1)
+train_set <- slice(dat, inTrain) %>% 
+  select(label, keep_columns+1)
+test_set <- slice(dat, -inTrain) %>% 
+  select(label, keep_columns+1)
 ```
 
 Note that the distances look a bit cleaner:
