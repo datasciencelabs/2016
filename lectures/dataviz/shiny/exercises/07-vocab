@@ -1,0 +1,5 @@
+1. The value of a normal R value will not change once you set it, unless you reset it or arrange for a program to reset it. The value of a reactive value will change when a user manipulates your app. 
+
+2. A reactive function can call reactive values and reactive objects. A normal function cannot call reactive values or reactive objects (unless the normal function is called during the execution of a reactive function).
+
+3. In R, objects and values are essentially the same: the value of a normal object will not change unless you reset it or arrange for a program to reset it. The value of a reactive object will change when the reactive values that it depends on change. Also, reactive "objects" have a more active role in the context of a Shiny app than normal objects have in R. Objects can trigger actions long after they are made.
