@@ -1,0 +1,226 @@
+---
+title: "Web scraping/processing with rvest and stringr"
+author: "David Robinson"
+date: "April 11, 2016"
+output: html_document
+---
+
+```{r echo = FALSE}
+library(knitr)
+opts_chunk$set(message = FALSE)
+```
+
+We've learned how to process ready-made datasets, as well as read them . But what if your data is on a website, formatted to be read by humans rather than read by R?
+
+We're going to learn to extract data from regular web pages so that it can be analyzed in R. This process is sometimes called "web-scraping" or "screen-scraping", and the rvest package is a powerful tool for doing it.
+
+### Resources
+
+#### rvest/CSS Selectors
+
+* [rvest package](https://github.com/hadley/rvest)
+* [SelectorGadget tool](http://selectorgadget.com/)
+* [rvest and SelectorGadget guide](https://cran.r-project.org/web/packages/rvest/vignettes/selectorgadget.html)
+* [Awesome tutorial for CSS Selectors](http://flukeout.github.io/#)
+
+#### stringr/regular expressions
+
+* [Introduction to stringr](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)
+* [Regular Expressions/stringr tutorial](https://stat545-ubc.github.io/block022_regular-expression.html)
+* [Regular Expression online tester](https://regex101.com/#python)- explains a regular expression as it is built, and confirms live whether and how it matches particular text.
+
+### Amazon Reviews
+
+We're going to be scraping [this page](http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/product-reviews/0387981403/ref=cm_cr_dp_qt_see_all_top?ie=UTF8&showViewpoints=1&sortBy=helpful): it just contains the (first page of) reviews of the ggplot2 book by Hadley Wickham. 
+
+```{r}
+library(dplyr)
+library(stringr)
+
+url <- "http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/product-reviews/0387981403/ref=cm_cr_dp_qt_see_all_top?ie=UTF8&showViewpoints=1&sortBy=helpful"
+```
+
+We use the rvest package to download this page.
+
+```{r}
+library(rvest)
+
+h <- read_html(url)
+```
+
+Now `h` is an `xml_document` that contains the contents of the page:
+
+```{r}
+h
+```
+
+How can you actually pull the interesting information out? That's where CSS selectors come in.
+
+### CSS Selectors
+
+CSS selectors are a way to specify a subset of nodes (that is, units of content) on a web page (e.g., just getting the titles of reviews). CSS selectors are very powerful and not too challenging to master- here's [a great tutorial](http://flukeout.github.io/#) But honestly you can get a lot done even with very little understanding, by using a tool called SelectorGadget.
+
+Install the [SelectorGadget](http://selectorgadget.com/) on your web browser. (If you use Chrome you can use the Chrome extension, otherwise drag the provided link into your bookmarks bar). [Here's a guide for how to use it with rvest to "point-and-click" your way to a working selector](http://selectorgadget.com/).
+
+For example, if you just wanted the titles, you'll end up with a selector that looks something like `.a-color-base`. You can pipe your HTML object along with that selector into the `html_nodes` function, to select just those nodes:
+
+```{r}
+h %>%
+  html_nodes(".a-color-base")
+```
+
+But you need the text from each of these, not the full tags. Pipe to the `html_text` function to pull these out:
+
+```{r}
+review_titles <- h %>%
+  html_nodes(".a-color-base") %>%
+  html_text()
+
+review_titles
+```
+
+Now we've extracted something useful! Similarly, let's grab the format (hardcover or paperback). Some experimentation with SelectorGadget shows it's:
+
+```{r}
+h %>%
+  html_nodes(".a-size-mini.a-color-secondary") %>%
+  html_text()
+```
+
+Now, we may be annoyed that it always starts with `Format: `. Let's introduce the `stringr` package.
+
+```{r}
+library(stringr)
+
+formats <- h %>%
+  html_nodes(".a-size-mini.a-color-secondary") %>%
+  html_text() %>%
+  str_replace("Format: ", "")
+
+formats
+```
+
+### Number of stars
+
+Next, let's get the number of stars. Some clicking with SelectorGadget finds an selector expression that will work:
+
+```{r}
+h %>%
+  html_nodes("#cm_cr-review_list .review-rating")
+```
+
+We can confirm these are the right tags (and there are ten of them, just like there are ten titles- good start). There's more going on in these that we don't need to worry about (they aren't just text, they're replaced with images in the web page), but using `html_text` still gets out relevant text:
+
+```{r}
+h %>%
+  html_nodes("#cm_cr-review_list .review-rating") %>%
+  html_text()
+```
+
+Now we need to pull out just the digit, 1-5. This can be done with regular expressions. Regular expressions are very powerful tools for working with text through "patterns"- see [here](http://www.regular-expressions.info/) for one resource.
+
+We'll use the [stringr](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html) package:
+
+```{r}
+h %>%
+  html_nodes("#cm_cr-review_list .review-rating") %>%
+  html_text() %>%
+  str_extract("\\d")
+```
+
+Note that we piped the character vector to the `str_extract` pattern, which pulls out the parts within a string that match a pattern. The `\\d` pattern means a digit (that is, 1-9).
+
+Finally, we have to turn them from a character vector to a numeric vector:
+
+```{r}
+number_stars <- h %>%
+  html_nodes("#cm_cr-review_list .review-rating") %>%
+  html_text() %>%
+  str_extract("\\d") %>%
+  as.numeric()
+
+number_stars
+```
+
+The same applies to the number of people that found a review useful. Let's collect that too:
+
+```{r}
+h %>%
+  html_nodes("#cm_cr-review_list .review-votes") %>%
+  html_text()
+```
+
+The difference is that here we don't want just one digit- there could be multiple. We can add a `+` (meaning "one or more") to the regular expression to the `\\d` to match that:
+
+```{r}
+h %>%
+  html_nodes("#cm_cr-review_list .review-votes") %>%
+  html_text() %>%
+  str_extract("\\d+")
+```
+
+You'll still need `as.numeric()`:
+
+```{r}
+number_helpful <- h %>%
+  html_nodes("#cm_cr-review_list .review-votes") %>%
+  html_text() %>%
+  str_extract("\\d+") %>%
+  as.numeric()
+
+number_helpful
+```
+
+Now we have all our data, from the first page:
+
+```{r}
+ret <- data_frame(review_titles, formats, number_stars, number_helpful)
+
+ret
+```
+
+### Multiple pages
+
+Take a look at the URL for the second page:
+
+    http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/product-reviews/0387981403/ref=undefined_2?ie=UTF8&showViewpoints=1&sortBy=helpful&pageNumber=2
+
+Notice that `pageNumber=2` at the end? Try adding a few values there. We see we can get all 5 URLs easily.
+
+```{r}
+url_base <- "http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/product-reviews/0387981403/ref=undefined_2?ie=UTF8&showViewpoints=1&sortBy=helpful&pageNumber="
+urls <- paste0(url_base, 1:5)
+urls
+```
+
+We may then want to scrape and combine all reviews. The way I like to do this to create a `read_page_reviews` function, then to use `lapply` and dplyr's `bind_rows` to combine them:
+
+```{r}
+read_page_reviews <- function(url) {
+  title <- h %>%
+    html_nodes(".a-color-base") %>%
+    html_text()
+  
+  format <- h %>%
+    html_nodes(".a-size-mini.a-color-secondary") %>%
+    html_text()
+  
+  helpful <- h %>%
+    html_nodes("#cm_cr-review_list .review-votes") %>%
+    html_text() %>%
+    str_extract("\\d+") %>%
+    as.numeric()
+  
+  stars <- h %>%
+    html_nodes("#cm_cr-review_list .review-rating") %>%
+    html_text() %>%
+    str_extract("\\d") %>%
+    as.numeric()
+
+  data_frame(title, format, stars, helpful)
+}
+
+ggplot2_reviews <- bind_rows(lapply(urls, read_page_reviews))
+
+knitr::kable(ggplot2_reviews)
+```

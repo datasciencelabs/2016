@@ -5,6 +5,14 @@ output: html_document
 
 **This homework is due Sunday April 10, 2016 at 11:59PM EST. When complete, submit your code in an R Markdown file and the knitted HTML via GitHub.**
 
+
+```{r, echo = FALSE}
+library(knitr)
+opts_chunk$set(cache = TRUE, message = FALSE)
+
+options(dplyr.print_min = 5)
+```
+
 # Introduction 
 
 The United Nations (UN) is an intergovernmental organization 
@@ -47,8 +55,7 @@ temp_object ## note that it's back
 
 We usually use the suffix `.RData` or `.rda` for these objects. 
 
-The data for this project is stored as an `.RData` file. Go to 
-[this web page](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379). 
+The data for this project is stored as an `.RData` file. Go to [this web page](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379). 
 To get the `.RData` file, click on the Download button for 
 `rawvotingdata13.tab` and choose the `RData format`.
 
@@ -56,9 +63,10 @@ To load the data set into R, use the `load()` function.
 Define the name of the object as `x` (but do NOT print it 
 out as it has over 1 million rows).
 
-```{r}
-## put your code here
-
+```{r load_data}
+## Here we download the dat from a csv so that the file runs without dependence
+## load(rawvotingdata13.tab)
+x <- read.delim("https://github.com/datasciencelabs/data/raw/master/rawvotingdata13.tab")
 ```
 
 
@@ -69,11 +77,15 @@ this object, it will crash your R session -- it's just that
 big! (`r nrow(x)` rows). So first wrap it in `tbl_df(x)`,
 and call it `votes`. After doing this you can erase `x` with `rm(x)`.
 
-```{r}
+
+```{r tbl_df, dependson = "load_data"}
 ## put your code here
 
+library(dplyr)
+votes <- tbl_df(x)
+votes
+rm(x)
 ```
-
 
 ### Problem 1C
 
@@ -88,21 +100,25 @@ kind of vote are in this dataset?
 ```{r}
 ## put your code here
 
+votes %>%
+  count(vote)
 ```
-
 
 Of the five types of votes, which three would provide information 
 about the country's position on an issue? Which two would not?
 
-**Your answer here**: 
+**Your answer here**: The Yes (1), Abstain (2), and No (3) 
+votes all contain information. Absent (8) and Not a Member (9) do not.
 
 
 Filter out the types of votes that do not provide information 
 about our countries position on an issue from our dataset.
 
-```{r}
+```{r votes_filter}
 ## put your code here
 
+votes <- votes %>%
+  filter(vote <= 3)
 ```
 
 
@@ -111,18 +127,20 @@ about our countries position on an issue from our dataset.
 According to the codebook, which column represents countries? 
 What type of unique code is used to represent each country?
 
-**Your answer here**:  
+**Your answer here**:  The `ccode` column represents countries, 
+which uses a COW (Correlates of War) number. 
 
 Create new `country` column that contains country names 
 based on this column. Hint: check out the [countrycode](https://cran.r-project.org/web/packages/countrycode/countrycode.pdf) 
 package. 
 
-
-```{r}
+```{r votes_mutate, dependson = "tbl_df"}
 ## put your code here
 
+library(countrycode)
+votes <- votes %>%
+  mutate(country = countrycode(ccode, "cown", "country.name"))
 ```
-
 
 ### Problem 1E
 
@@ -174,24 +192,30 @@ year(descriptions$date) <- ifelse(y > 2030, y - 100, y)
 Count the number of votes that were taken in each year. 
 Create a line graph of the number of votes per year.
 
-```{r}
+```{r dependson = "descriptions", warning=FALSE}
 ## put your code here
 
+library(lubridate)
+library(ggplot2)
+descriptions %>%
+  count(year = year(date)) %>%
+  ggplot(aes(year, n)) +
+  geom_line() + xlab("Year") + ylab("Number of votes per year")
 ```
-
 
 What year would we want to filter out from the dataset 
 because there was only one vote? 
 
-**Your answer here**: 
+**Your answer here**:  2015
 
 Filter it out now.
 
 ```{r}
 ## put your code here
 
+descriptions <- descriptions %>%
+  filter(year(date) != 2015)
 ```
-
 
 ### Problem 1F
 
@@ -205,8 +229,9 @@ What percent of votes in history were categorized as "important"?
 ```{r}
 ## put your code here
 
+descriptions %>%
+  count(importantvote)
 ```
-
 
 The most interesting analyses can be done by combining the description 
 and country-voting data.
@@ -220,8 +245,10 @@ need any more (and could be misleading). The final dataset should be called
 ```{r}
 ## put your code here
 
+votes <- votes %>%
+  inner_join(descriptions) %>%
+  select(-yes, -no, -abstain)
 ```
-
 
 
 # Problem 2
@@ -258,13 +285,18 @@ with `year`.
 ```{r}
 ## put your code here
 
+library(broom)
+lm_fit <- y %>% group_by(year) %>% 
+  summarize(agreement=mean(USA==Canada, na.rm=TRUE)) %>% 
+  lm(agreement ~ year, dat=.)
+tidy(lm_fit)
 ```
 
 What is the trend predicted by the linear model? 
 Is it statistically significant?
 
-**Your answer here**: 
-
+**Your answer here**: There is a negative trend in the agreement between 
+the USA and Canada throughout the years. It is statistically significant. 
 
 
 ### Problem 2B
@@ -285,6 +317,11 @@ a trend that goes through data.
 ```{r}
 ## put your code here
 
+y %>% group_by(year) %>% 
+  summarize(agreement=mean(USA==Canada, na.rm=TRUE)) %>% 
+  ggplot(aes(year, agreement)) +
+  geom_point() +
+  geom_smooth(span=1/4) 
 ```
 
 
@@ -294,9 +331,25 @@ Make the plot above for the agreement through time between the US
 and the following countries: Israel, UK, Mexico, Cuba, and China. 
 Make two plots: one for important votes to non-important votes. 
 
-```{r}
+```{r, warnings = FALSE}
 ## put your code here
 
+countries <- c("USA", "Israel", "UK", "Mexico", "Cuba", "China")
+votes %>% mutate(year=year(date)) %>%
+  filter(country%in%countries)  %>%
+  select(rcid, year, country, vote, importantvote) %>%
+  spread(country, vote) %>%
+  group_by(year, importantvote) %>%
+  summarize(Israel=mean(USA==Israel, na.rm=TRUE),
+            UK=mean(USA==UK, na.rm=TRUE),
+            Mexico=mean(USA==Mexico, na.rm=TRUE),
+            Cuba=mean(USA==Cuba, na.rm=TRUE),
+            China=mean(USA==China, na.rm=TRUE))%>% 
+  gather(country, agreement, Israel:China) %>%
+  ggplot(aes(year, agreement, col=country))  +
+  geom_point()+ 
+  stat_smooth(span=1/4, method.args=list(degree=1), se=FALSE) +
+  facet_wrap(~ importantvote)
 ```
 
 Describe the observed patterns.
@@ -348,12 +401,25 @@ visualize it using `heatmap()` or `hclust()`.
 ```{r}
 ## put your code here
 
+d <- dist(t(X))
 ```
-
 
 What country is closest to US? Which is furthest?
 
-**Your answer here**: 
+```{r}
+dist_from_us <- as.matrix(d)["USA",]
+library(ggrepel)
+data.frame(country = names(dist_from_us), dist = dist_from_us) %>% 
+    filter(country!="USA") %>% 
+    arrange(dist) %>% 
+    ggplot(aes(x=seq_along(dist), y=dist, label=country)) + 
+        geom_point() + geom_text_repel()
+
+plot(hclust(d))
+heatmap(as.matrix(d))
+```
+
+**Your answer here**: Israel is closest. Cuba is farthest. 
 
 
 ### Problem 3B
@@ -374,6 +440,16 @@ column (`y`) to contain only 0s and 1s where 0 = `No` vote and 1 = `Yes` vote.
 ```{r}
 ## put your code here
 
+countries <- c("USA", "Canada", "Israel", "UK", "Mexico", "Cuba", "China")
+
+dat <- votes %>% 
+        filter(importantvote == 1 & country %in% countries) %>%
+        select(rcid, country, vote) %>% 
+        spread(country, vote, fill = 2) %>% 
+        rename(y = USA) %>% 
+        filter(y != 2) %>% 
+        select(-rcid) %>%
+        mutate(y = ifelse(y == 1, 1, 0))
 ```
 
 Use the `caret` R package to split the data into a training set with 
@@ -383,9 +459,17 @@ Then use `glm()` to build a model. What is the accuracy?
 ```{r}
 ## put your code here
 
+library(caret)
+
+inTrain <- createDataPartition(y = dat$y, p = 0.8)
+train_set <- slice(dat, inTrain$Resample1)
+test_set <- slice(dat, -inTrain$Resample1)
+
+fit <- glm(y~., data=train_set, family="binomial")
+pred <- predict(fit, newdata = test_set, type = "response")
+tab <- table(pred = round(pred), truth = test_set$y)
+confusionMatrix(tab)
 ```
-
-
 
 ### Problem 3C 
 
@@ -396,8 +480,20 @@ Try 10 new random splits and report on how much our accuracy changes.
 ```{r}
 ## put your code here
 
+acc <- sapply(1:10,function(i){
+  inTrain <- createDataPartition(y = dat$y,
+                               p=0.8)
+  train_set <- slice(dat, inTrain$Resample1)
+  test_set <- slice(dat, -inTrain$Resample1)
+  fit <- glm(y~., data=train_set, family="binomial")
+  pred <- predict(fit, newdata = test_set, type = "response")
+  tab <- table(pred = round(pred), 
+             truth = test_set$y)
+  confusionMatrix(tab)$overall["Accuracy"]
+})
+mean(acc)
+sd(acc)
 ```
-
 
 ### Problem 3D 
 
@@ -408,8 +504,21 @@ Plot your results.
 ```{r}
 ## put your code here
 
+control <- trainControl(method='cv', number=10, p=.8)
+dat <- mutate(dat, y=factor(y))
+res <- train(y ~ .,
+             data = dat,
+             method = "knn",
+             trControl = control,
+             tuneLength = 1, # How fine a mesh to go on grid
+             tuneGrid=data.frame(k=seq(1,25,2)),
+             metric="Accuracy")
+res$results %>% 
+  ggplot(aes(k, Accuracy, ymin= Accuracy - AccuracySD, 
+             ymax = Accuracy + AccuracySD)) +
+  geom_point() + geom_errorbar()
 ```
 
 How many nearest neighbors should we use?
 
-**Your answer here**: 
+**Your answer here**: We should use k=3
