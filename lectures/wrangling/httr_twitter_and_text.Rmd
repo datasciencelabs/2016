@@ -1,0 +1,368 @@
+---
+title: "APIs, Twitter, and Text Mining with httr, twitteR, tidytext"
+author: "David Robinson"
+date: "April 25, 2016"
+output: html_document
+---
+
+```{r echo = FALSE, cache = FALSE}
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE)
+
+options(httr_oauth_cache = TRUE)
+
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+### Useful Resources
+
+* [httr quickstart guide](https://cran.r-project.org/web/packages/httr/vignettes/quickstart.html)
+* [apps.twitter.com](https://apps.twitter.com/): start a Twitter app here before using the twitteR package
+
+### Using an API with httr
+
+Suppose a company has data we'd like to analyze, and they've made an API available. How do we use it?
+
+For example, suppose we wanted to do an analysis of Stack Overflow R questions. We would find out that [Stack Exchange has an API](https://api.stackexchange.com/), and choose the [search](https://api.stackexchange.com/docs/search) option. This provides us a URL: `https://api.stackexchange.com/docs/search`- and tells us what queries we'd want to fill in.
+
+We can then use httr to make [GET](http://www.w3schools.com/tags/ref_httpmethods.asp) requests.
+
+```{r}
+library(httr)
+
+url <- "https://api.stackexchange.com/2.2/search"
+
+req <- GET(url, query = list(order = "desc",
+                             pagesize = 100,
+                             sort = "creation",
+                             tagged = "r",
+                             site = "stackoverflow"))
+
+req
+```
+
+This is a "response" object. You can see it contains a bunch of information, like the date of the request, the size of the response, and the [HTTP status code](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes) (like 200 for a success and 404 for an error). Incidentally, you can check this status code with:
+
+```{r}
+status_code(req)
+```
+
+This can be useful if you need your program to recognize errors (like `if (status_code(req) != 200)`).
+
+#### Parsing JSON
+
+What we actually care about is the content. You can take a look at it with the `content(req, "text")`.
+
+```{r}
+con <- content(req, "text")
+cat(stringr::str_sub(con, 1, 2000))
+```
+
+This is called [JSON](http://www.w3schools.com/json/)- it's one of the most common ways data is returned from the web.
+
+We can use the [jsonlite](https://cran.r-project.org/web/packages/jsonlite/index.html) package to parse this format into a list.
+
+```{r}
+library(jsonlite)
+
+j <- jsonlite::fromJSON(con)
+```
+
+Now we figure out how to get the information out of `j`.
+
+```{r}
+summary(j)
+```
+
+Clearly it's `j$items` that we want: the rest is "metadata" about whether the quota has been filled. `j$items` is a data frame:
+
+```{r}
+head(j$items)
+```
+
+But several columns within the data frame are themselves data frames. This is actually legal to do- it just leads to some really odd behaviors (in particular, it can't be combined well with dplyr, even when working with other columns). jsonlite provides a flatten function that fixes this. 
+
+```{r}
+library(dplyr)
+r_questions <- j$items %>%
+    flatten() %>%
+    tbl_df()
+
+r_questions
+```
+
+We can do cool things with this list of R questions. For example, what are the most common tags on these questions?
+
+```{r}
+library(tidyr)
+
+most_common <- r_questions %>%
+    unnest(tag = tags) %>%
+    count(tag, sort = TRUE)
+
+most_common
+```
+
+Of course the `r` tag is used on all of them, and it looks like other common tags include ggplot2 and dataframe.
+
+You may want to put all the querying and processing steps into one function:
+
+```{r}
+search_stack_overflow <- function(...) {
+    url <- "https://api.stackexchange.com/2.2/search"
+    req <- GET(url, query = list(...))
+    
+    con <- content(req, "text")
+    ret <- flatten(fromJSON(con)$items)
+    tbl_df(ret)
+}
+
+search_stack_overflow(order = "desc",
+                      pagesize = 100,
+                      sort = "creation",
+                      tagged = "r",
+                      site = "stackoverflow")
+```
+
+There's a lot more complexity here. For example, this returns only 100 items. You can use the `page` argument, [as described here](https://api.stackexchange.com/docs/paging) to get additional pages of output.
+
+In fact, this complexity, and lots more, is handled by my R client to Stack Overflow, [stackr](https://github.com/dgrtwo/stackr):
+
+```{r}
+library(stackr)
+
+r_questions_500 <- stack_search(tagged = "r", pagesize = 100, num_pages = 5)
+
+tbl_df(r_questions_500)
+```
+
+Generally it's easier to work with a package like this. But what's important to understand is that API packages like this use the exact same functionality, or very similar, of working with GET queries as above.
+
+Thus, when you want to query a site, it's often a good idea to look for an R package to do it first (try googling "r package [site] api"). These handle a lot of complexitly. But if none is available, or if it doesn't have the functionality you want, it's important to know how to use the httr package and understand the fundamentals of API interfaces.
+
+### Working with Twitter client
+
+[twitteR](https://cran.r-project.org/web/packages/twitteR/README.html) is a good example of an R package that handles an online client API.
+
+#### Twitter Setup
+
+```{r}
+library(twitteR)
+```
+
+To get this to work, you'll need some setup. Follow the steps [here](https://cran.r-project.org/web/packages/twitteR/README.html) to get your own Twitter application- in the process it will give you four values. Put those values into global options using this code:
+
+```{r eval = FALSE}
+options(twitter_consumer_key = "YOUR_KEY_HERE")
+options(twitter_consumer_secret = "YOUR_SECRET_HERE")
+options(twitter_access_token = 'YOUR_ACCESS_TOKEN_HERE')
+options(twitter_access_token_secret = "YOUR_ACCESS_TOKEN_SECRET_HERE")
+```
+
+(Fill in those values with the ones from your Twitter app first). I generally put this in my .Rprofile file in my home directory (see [here](http://www.statmethods.net/interface/customizing.html)). This a) makes sure they are always available, and b) keeps them secret, so they're not in any of my scripts.
+
+Then you can run this code to set up your authentication:
+
+```{r setup_twitter_oauth, eval = FALSE}
+setup_twitter_oauth(getOption("twitter_consumer_key"),
+                    getOption("twitter_consumer_secret"),
+                    getOption("twitter_access_token"),
+                    getOption("twitter_access_token_secret"))
+```
+
+#### Search Twitter
+
+Suppose we want to do an analysis of the #rstats hashtag, for example. The `searchTwitter` function lets you do this.
+
+```{r eval = FALSE}
+rstats <- searchTwitter("#rstats", n = 500)
+```
+
+```{r echo = FALSE}
+# I've found this is slow and unreliable in knitr, so I'm leaving
+# this run separately
+load("~/Dropbox/rstats.rda")
+```
+
+This looks like it's a list of character vectors containing tweets. Each of these is actually a "status" object, including additional information like who tweeted it and when it was posted. Generally, it is a good idea to turn this into a tbl_df, and there's a handy trick for this::
+
+```{r}
+rstats_tweets <- bind_rows(lapply(rstats, as.data.frame))
+
+rstats_tweets
+```
+
+#### Analyzing Tweets
+
+Note that this includes retweets alongside originals. If we want to do an analysis of individual tweets, we'd probably want to filter those out:
+
+```{r}
+rstats_non_retweets <- rstats_tweets %>%
+    filter(!isRetweet)
+```
+
+You could find out who tweeted the most among these 300:
+
+```{r}
+rstats_non_retweets %>%
+    count(screenName, sort = TRUE)
+```
+
+You could make a histogram about how often each was retweeted:
+
+```{r}
+library(ggplot2)
+ggplot(rstats_non_retweets, aes(retweetCount)) +
+    geom_histogram()
+```
+
+### Text Mining and Tokens
+
+There are many approaches to text mining in R, and I will link to some. The one I'm discussing is very new- I developed it with Julia Silge just a month ago- but I like the way it allows engagement with text with dplyr and ggplot2.
+
+One example we use to demonstrate is the book Pride and Prejudice. You can use the `janeaustenr` package on CRAN for this.
+
+```{r}
+library(janeaustenr)
+
+head(prideprejudice, 20)
+```
+
+The tidy approach to text mining keeps everything in data frames. Start with a one-row-per-line data frame.
+
+```{r}
+book <- data_frame(text = prideprejudice)
+book
+```
+
+Now, the tidytext package offers the `unnest_tokens` function. This does tokenization- which divides text into a sequence of meaningful units, like words or sentences- on a data frame with a text column.
+
+```{r}
+library(tidytext)
+
+book %>%
+    unnest_tokens(word, text)
+```
+
+We notice there are many words . The `stop
+
+```{r}
+stop_words
+
+book %>%
+    unnest_tokens(word, text) %>%
+    filter(!word %in% stop_words$word)
+```
+
+### Tokenizing sentences, paragraphs, or characters
+
+Tokenizing doesn't have to be by word. We can divide it by paragraph:
+
+```{r}
+book %>%
+    unnest_tokens(paragraph, text, token = "paragraphs") 
+```
+
+(Note that what we name the output column, `paragraph` in this case, doesn't affect it, it's just good to give it a consistent name). We could also divide it by sentence:
+
+```{r}
+book %>%
+    unnest_tokens(sentence, text, token = "sentences") 
+```
+
+(Note that this is tricked by terms like "Mr." and "Mrs.").
+
+One neat trick is that we can unnest by two layers- paragraph and then word. This lets us keep track of which paragraph is which.
+
+```{r words_by_paragraph}
+paragraphs <- book %>%
+    unnest_tokens(paragraph, text, token = "paragraphs") %>%
+    mutate(paragraph_number = row_number()) %>%
+    slice(-n())
+
+# (Quick note: the `slice` is because the last paragraph has some
+# formatting issues in this version of janeaustenr, so we're dropping it).
+
+words_by_paragraph <- paragraphs %>%
+    unnest_tokens(word, paragraph) %>%
+    filter(!word %in% stop_words$word)
+
+words_by_paragraph
+```
+
+Similarly, we could use this tokenization approach on Twitter data:
+
+```{r}
+tweet_words <- rstats_non_retweets %>%
+    select(screenName, id, created, text) %>%
+    unnest_tokens(word, text) %>%
+    filter(!word %in% stop_words$word)
+
+tweet_words
+
+tweet_words %>%
+    count(word, sort = TRUE)
+```
+
+#### Sentiment Analysis
+
+One of the simpler things to do with text is to treat each text as a "bag of words."
+
+Meet the sentiments dictionary, also from the tidytext package.
+
+```{r}
+sentiments
+```
+
+There are other lexicons in this dataset (see `?sentiments` for more) but we'll use the NRC dataset first. This dataset associates each word with one or more moods, such as "anger", "joy", or "sadness".
+
+```{r}
+nrc <- sentiments %>%
+    filter(lexicon == "nrc") %>%
+    select(word, sentiment)
+
+nrc
+```
+
+We want to match these word-sentiment pairs to our book. The `inner_join` function from dplyr is perfect for this.
+
+```{r}
+words_by_paragraph %>%
+    inner_join(nrc)
+```
+
+```{r}
+words_paragraph_sentiment <- words_by_paragraph %>%
+    inner_join(nrc) %>%
+    count(sentiment, paragraph_number) %>%
+    spread(sentiment, n, fill = 0) %>%
+    mutate(positivity = (positive - negative) / (positive + negative + 1))
+
+words_paragraph_sentiment
+```
+
+A simple measure of positivity is "positive words minus negative words, divided by positive + negative + 1". The "+ 1" is so that having, for example, 10 positive and no negative is better than 1 positive, 1 negative.
+
+What is the most positive sentence?
+
+```{r}
+words_paragraph_sentiment %>%
+    arrange(desc(positivity))
+
+paragraphs %>%
+    filter(paragraph_number == 575) %>%
+    .$paragraph
+```
+
+That looks about right! What is the most negative paragraph?
+
+```{r}
+words_paragraph_sentiment %>%
+    arrange(positivity)
+
+paragraphs %>%
+    filter(paragraph_number == 774) %>%
+    .$paragraph
+```
+
+Plausible again!
