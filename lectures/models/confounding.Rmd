@@ -1,0 +1,325 @@
+---
+layout: page
+title: Confounding
+---
+
+```{r options, echo=FALSE}
+opts_chunk$set(fig.path=paste0("figure/", sub("(.*).Rmd","\\1",basename(knitr:::knit_concord$get('infile'))), "-"))
+```
+
+
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+```
+
+## Confounding
+
+"Correlation is not causation" is one of the most important lessons you should take from this or any other data analysis course. A common example for why this statement is so often true is confounding. Simply stated confounding occurs when we observe a correlation or association between $X$ and $Y$, but  this is strictly the result of both $X$ and $Y$ depending on an extraneous variable $Z$. Here we describe Simpson's paradox.
+
+
+## Gender contributes to personal research funding success in The Netherlands
+
+A recent [PNAS paper](http://www.pnas.org/content/112/40/12349.abstract) analyzed success rates from funding agencies and concluded that 
+
+> Our results reveal gender bias favoring male applicants over female applicants in the prioritization of their “quality of researcher” (but not "quality of proposal") evaluations and success rates, as well as in the language use in instructional and evaluation materials.
+
+The main evidence for this conclusion comes down to a comparison of the percentages
+
+
+
+```{r,echo=FALSE}
+tab <- matrix(c(290, 1635 - 290, 177 ,   1188 - 177), 2, 2, byrow = TRUE)
+colnames(tab) <- c("Awarded","Not Awarded")
+rownames(tab) <- c("Men", "Women")
+tab
+```
+
+Difference in percentages:
+
+```{r}
+options(digits = 3)
+cat("Men :", tab[1,1]/sum(tab[1,])*100,"Women", tab[2,1]/sum(tab[2,])*100)
+cat("p-value:", chisq.test(tab)$p.value)
+```
+
+So there is an association. But can we infer causation here? 
+
+[A response](http://www.pnas.org/content/112/51/E7036.extract) was published a few months later titled _No evidence that gender contributes to personal research funding success in The Netherlands: A reaction to van der Lee and Ellemers_  which concluded
+
+> However, the overall gender effect borders on statistical significance, despite the large sample. Moreover, their conclusion could be a prime example of Simpson’s paradox (2, 3); if a higher percentage of women apply for grants in more competitive scientific disciplines (i.e., with low application success rates for both men and women), then an analysis across all disciplines could incorrectly show "evidence" of gender inequality.
+
+
+## Example of Simpson's Paradox
+
+A very clear example of how Simpson's Paradox has resulted in incorrect conclusions comes from another controversy related to gender bias. Admission data from U.C. Berkeley 1973 showed that more men were being admitted than women: 44% men were admitted compared to 30% women. This actually led to a [lawsuit](http://en.wikipedia.org/wiki/Simpson%27s_paradox#Berkeley_gender_bias_case). See: PJ Bickel, EA Hammel, and JW O'Connell. Science (1975). Here is the data:
+
+
+Probability of 
+
+```{r}
+load(url("https://github.com/genomicsclass/dagdata/raw/master/data/admissions.rda"))
+admissions$total=admissions$Percent*admissions$Number/100
+
+##percent men get in
+sum(admissions$total[admissions$Gender==1]/sum(admissions$Number[admissions$Gender==1]))
+
+##percent women get in
+sum(admissions$total[admissions$Gender==0]/sum(admissions$Number[admissions$Gender==0]))
+```
+
+A chi-square test clearly rejects the hypothesis that gender and admission are independent:
+```{r}
+##make a 2 x 2 table
+index = admissions$Gender==1
+men = admissions[index,]
+women = admissions[!index,]
+men_yes = sum(men$Number*men$Percent/100)
+men_no = sum(men$Number*(1-men$Percent/100))
+women_yes = sum(women$Number*women$Percent/100)
+women_no = sum(women$Number*(1-women$Percent/100))
+tab = matrix(c(men_yes,women_yes,men_no,women_no),2,2)
+colnames(tab) <- c("Admitted","Not Admitted")
+rownames(tab) <- c("Men","Women")
+tab
+print(chisq.test(tab)$p.val)
+```
+
+
+But closer inspection shows a paradoxical result. Here are the percent admissions by major:
+```{r}
+res <- cbind(admissions[1:6,c(1,3)],admissions[7:12,3])
+colnames(res)[2:3]=c("Male","Female")
+res$difference <- res[,2] - res[,3]
+res
+```
+
+Four out of the six majors favor women. More importantly all the difference are much smaller than the 14.2 difference we see when examining everything.
+
+The chi-square test we performed above suggests a dependence between admission and gender. Yet when the data is grouped by major, this dependence seems to disappear.  What's going on? 
+
+This is an example of _Simpson's paradox_. A plot showing the percentages that applied to a major against the percent that get into that major, for males and females starts to point to an explanation.
+
+So let's define three variables: $X$ is 1 for men and 0 for women, $Y$ is 1 for those admitted to UC Berkeley and 0 otherwise, and $Z$ is major. The lawsuit is based on the fact that $\mbox{Pr}(Y=1 | X = x)$ is higher for $x=1$ then $x=0$. But $Z$ is an important confounder to consider. Notice that $Z$ correlates with $X$. Major is a strong predictor of gender. Here are the applications each major received in terms of percentages of men/women 
+
+```{r}
+res <- cbind(admissions[1:6,1:2],admissions[7:12,2])
+colnames(res) <- c("major", "percent_male","percent_female")
+res[,2:3] <- res[,2:3] / rowSums(res[,2:3])*100
+gender <- res[,c(1,3)]
+arrange(gender, percent_female)
+```
+
+Compare for major B and major E.
+
+But $Z$ is also correlated with $Y$. Some majors admit more students than others:
+
+```{r}
+res <- cbind(admissions[1:6,1:3],admissions[7:12,2:3])
+easy <- data.frame(major = res[,1],
+                   percent_admitted=(res[,2]*res[,3]+res[,4]*res[,5])/rowSums(res[,c(2,4)]))
+arrange(easy, percent_admitted)
+```
+
+Compare major F to major A.
+
+So we see that our confounder $Z$ is correlated with both $X$ and $Y$. 
+
+```{r}
+left_join(gender, easy) %>% ggplot(aes(percent_admitted, percent_female)) + geom_point()
+```
+
+
+What the plot suggests is that females were much more likely to apply to "hard" majors. The plot shows that males and "hard" majors are confounded.
+
+
+#### Confounding explained graphically
+
+Here we visualize the confounding. In the plots below, each letter represents a person. Accepted individuals are denoted in green and not admitted in orange. The letter indicates the major. In this first plot we group all the students together and notice that the proportion of green is larger for men.
+
+
+```{r simpsons_paradox_illustration, fig.cap="Admitted are in green and majors are denoted with letters. Here we clearly see that more males were admitted.",echo=FALSE,fig.width=10.5,fig.height=5.25}
+###make data for plot
+library(rafalib)
+mypar()
+CEX=0.5
+NC <- 70
+tmp=rowSums(tab)
+FNC <- round(NC*tmp[2]/tmp[1])
+SCALE <- 1
+
+makematrix<-function(x,n,addx=0,addy=0){
+  m<-ceiling(length(x)/n)
+  expand.grid(1:n+addx,addy+1:m)[seq(along=x),] 
+}
+males<- sapply(1:6,function(i){
+  tot=admissions[i,2]*SCALE
+  p=admissions[i,3]/100
+  x=rep(c(0,1),round(tot*c(1-p,p)))
+})
+allmales<-Reduce(c,males)
+females<- sapply(7:12,function(i){
+  tot=admissions[i,2]*SCALE
+  p=admissions[i,3]/100
+  rep(c(0,1),round(tot*c(1-p,p)))
+})
+allfemales<-Reduce(c,females)
+mypar(1,1)
+malepoints <- makematrix(allmales,NC)
+femalepoints <- makematrix(allfemales,FNC,NC+NC/10)
+NR <- max(c(malepoints[,2],femalepoints[,2]))
+plot(0,type="n",xlim=c(min(malepoints[,1]),max(femalepoints[,1])),ylim=c(0,NR),xaxt="n",yaxt="n",xlab="",ylab="")
+PCH=LETTERS[rep(1:6,sapply(males,length))]
+o<-order(-allmales)
+points(malepoints,col=2-allmales[o],pch=PCH[o],cex=CEX)
+PCH=LETTERS[rep(1:6,sapply(females,length))]
+o<-order(-allfemales)
+points(femalepoints,col=2-allfemales[o],pch=PCH[o],cex=CEX)
+abline(v=NC+NC/20)
+axis(side=3,c(NC/2,NC+NC/2),c("Male","Female"),tick=FALSE)
+```
+
+Now we stratify the data by major. The key point here is that most of the accepted men (green) come from the easy majors: A and B.
+
+```{r simpsons_paradox_illustration2, fig.cap="Simpon's Paradox illustrated. Admitted students are in green. Students are now stratified by the major to which they applied.", echo=FALSE,fig.width=10.5,fig.height=5.25}
+mypar()
+malepoints <- vector("list",length(males))
+femalepoints <- vector("list",length(males))
+N<- length(males)
+ 
+ADDY <- vector("numeric",N+1)
+for(i in 1:N){
+  malepoints[[i]] <- makematrix(males[[i]],NC,0,ADDY[i])
+  femalepoints[[i]] <- makematrix(females[[i]],FNC,NC+NC/10,ADDY[i])
+   ADDY[i+1] <- max(malepoints[[i]][,2],femalepoints[[i]][,2])+1
+}
+
+plot(0,type="n",
+     xlim=c( min(sapply(malepoints,function(x)min(x[,1]))),max(sapply(femalepoints,function(x)max(x[,1])))),
+  ylim=c(0,max(sapply(femalepoints,function(x)max(x[,2])))),xaxt="n",yaxt="n",xlab="",ylab="")
+          
+for(i in 1:N){
+  points(malepoints[[i]],col=2+sort(-males[[i]]),pch=LETTERS[i],cex=CEX)
+  points(femalepoints[[i]],col=2+sort(-females[[i]]),pch=LETTERS[i],cex=CEX)
+  if(i>1) abline(h=ADDY[i])
+  }
+abline(v=NC+NC/20)
+axis(side=3,c(NC/2,NC+FNC/2),c("Male","Female"),tick=FALSE)
+axis(side=2,ADDY[-1]/2+ADDY[-length(ADDY)]/2,LETTERS[1:N],tick=FALSE,las=1)
+```
+
+#### Average after stratifying
+
+
+In this plot, we can see that if we condition or stratify by major, and then look at differences, we control for the confounder and this effect goes away. 
+```{r admission_by_major, fig.cap="Admission percentage by major for each gender."}
+admissions %>% mutate(Gender = ifelse(Gender == 1, "Men", "Women")) %>% 
+                        ggplot(aes(Major, Percent, col = Gender, size = Number)) +
+  geom_point()
+```
+
+If we average the difference by major we find that the percent ad actually 3.5% higher for women.
+
+```{r}
+mean(res[,3] - res[,5])
+```
+
+
+
+## Back to the Netherlands
+
+Surprisingly the PNAS paper described above made a similar mistake. Unfortunately the data for the paper is included as a table in a [pdf document](http://www.pnas.org/content/suppl/2015/09/16/1510159112.DCSupplemental/pnas.201510159SI.pdf). Fortunately, there is an R package that let's use read in text contained in pdf files. 
+
+```{r}
+library("pdftools")
+txt <- pdf_text("pnas.201510159SI.pdf")
+tab <- txt[2]
+```
+
+
+With some wrangling we can create a data frame with the information we need:
+```{r}
+tab <- strsplit(tab,"\n")[[1]]
+the_names <- tab[[3]]
+tab <- tab[4:14]
+tab <- strsplit(tab,"\\s\\s+")
+tab <-t(sapply(tab, function(x) x))
+tab <- tab[,-1]
+tab
+ 
+the_names <- strsplit(gsub(",\ n|,\ %","",the_names),"\\s\\s+")[[1]][-1]
+the_names <- paste(rep(the_names,each=3),tab[1,-1])
+the_names <- gsub(" ","_",the_names)
+the_names <- c(tab[1,1], the_names)
+colnames(tab) <- tolower(the_names)
+tab <- tab[-1,]
+tab <- as.data.frame(tab, stringsAsFactors = FALSE)
+my_as_numeric <- function(x) as.numeric(gsub(",|a|b","",x))
+tab[,-1] <- apply(tab[,-1], 2, my_as_numeric)
+tab <- tab[-1,] ##take out total since we can compute
+kable(tab)
+```
+
+
+Note that, as in previous example, the difference between men and women differ by discipline. In fact if we perform a chi square test for each discipline we don't see strong evidence:
+
+```{r}
+do_chi_sq <- function(i){
+  x <- tab[i,]
+  tab <- matrix(c(x$awards_men, x$applications_men-x$awards_men, x$awards_women, x$applications_women-x$awards_women),2,2)
+  p.value = chisq.test(tab)$p.value
+}
+tab$difference <- tab$success_rates_men - tab$success_rates_women
+tab$p.value <- sapply(1:nrow(tab), do_chi_sq)
+tab %>% select(discipline, difference, p.value) %>% arrange(difference) %>% kable
+```
+
+Note that the difference appear to follow a normal distribution
+
+```{r}
+qqnorm(tab$difference)
+qqline(tab$difference)
+```
+
+And as in the previous example discipline is a counfounder, with women applying for grants in the disciplines with lower success rates:
+
+```{r}
+mutate(tab, success_rate = awards_total/applications_total, 
+       percent_female = applications_women/applications_total) %>% 
+  select(discipline, success_rate, percent_female) %>% 
+  ggplot(aes(success_rate, percent_female)) + geom_point()
+```
+
+If we stratify by discipline :
+
+```{r}
+tab <- arrange(tab, success_rates_total)
+data_frame(discipline = c(tab$discipline, tab$discipline),
+  applications = c(tab$applications_men, tab$applications_women),
+  success_rates = c(tab$success_rates_men, tab$success_rates_women),
+  Gender = rep(c("Men","Women"), each = nrow(tab)),
+  row = 1:(nrow(tab)*2)) %>% 
+  ggplot(aes(reorder(discipline, row), success_rates, col = Gender, size = applications)) +
+  geom_point() + ylab("Discipline") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+Here the average of the per discipline difference is
+```{r}
+mean(tab$difference)
+```
+
+
+####  Bonus: Simpson's Paradox in baseball
+
+Simpson's Paradox is commonly seen in baseball statistics. Here is a well known example in which David Justice had a higher batting average than Derek Jeter in both 1995 and 1996, but Jeter had a higher overall average:
+
+|               | 1995           | 1996           | Combined        |
+| ------------- | -------------- | -------------- | --------------- |
+| Derek Jeter   | 12/48 (.250)   | 183/582 (.314) | 195/630 (.310)  |
+| David Justice | 104/411 (.253) | 45/140 (.321)  | 149/551 (.270)  |
+
+The confounder here is games played. Jeter played more games during the year he batted better, while the opposite is true for Justice.
+
+<a name="genomics"></a>
