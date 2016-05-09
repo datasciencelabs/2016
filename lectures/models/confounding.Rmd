@@ -3,12 +3,8 @@ layout: page
 title: Confounding
 ---
 
-```{r options, echo=FALSE}
-opts_chunk$set(fig.path=paste0("figure/", sub("(.*).Rmd","\\1",basename(knitr:::knit_concord$get('infile'))), "-"))
-```
 
-
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(dplyr)
 library(knitr)
 library(ggplot2)
@@ -234,6 +230,7 @@ Surprisingly the PNAS paper described above made a similar mistake. Unfortunatel
 
 ```{r}
 library("pdftools")
+download.file("http://www.pnas.org/content/suppl/2015/09/16/1510159112.DCSupplemental/pnas.201510159SI.pdf", destfile = "pnas.201510159SI.pdf")
 txt <- pdf_text("pnas.201510159SI.pdf")
 tab <- txt[2]
 ```
