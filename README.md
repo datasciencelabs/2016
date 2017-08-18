@@ -1,3 +1,3 @@
-# Welcome to BIO 260 Introduction to Data Science
+# Archived Spring 2016 BIO 260 Introduction to Data Science course
 
-Official course page here: [http://datasciencelabs.github.io](http://datasciencelabs.github.io)
+Spring 2016 course page here: [http://datasciencelabs.github.io/2016](http://datasciencelabs.github.io/2016)
