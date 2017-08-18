@@ -21,6 +21,8 @@ We will learn these concepts through six data analysis projects. Grades will be 
 
 Each student is given six late days for homework at the beginning of the semester. A late day extends the individual homework deadline by 24 hours without penalty. No more than two late days may be used on any one assignment. Assignments handed in more than 48 hours after the original deadline will not be graded. We do not accept any homework under any circumstances more than 48 hours after the original deadline. Late days are intended to give you flexibility: you can use them for any reason no questions asked. You don't get any bonus points for not using your late days. Also, you can only use late days for the individual homework deadlines all other deadlines (e.g., project milestones) are hard.
 
+Although the each student is only given a total of 6 late days, we will be accepting homework from students that pass this limit. However, we will be deducting 2 points for each extra late day. For example, if you have already used all of your late days for the semester, we will deduct 2 points for assignments <24 hours late, and 4 points for assignments 24-48 hours late. 
+
 #### Prerequisites
 Must have basic programming knowledge, and statistics knowledge at the level of Stat 100 or above
 
@@ -31,7 +33,9 @@ None. Instead, we have a list of recommended readings on the web site.
 
 This is a **TENTATIVE** schedule for the course. 
 
-<iframe src="https://docs.google.com/spreadsheets/d/1680EiDxX0SeOq2iNuQtKicHPgRKjq4K6AB28huL09SE/pubhtml?gid=0&single=true&amp;widget=true&amp;headers=false" width="100%" height="800"></iframe>
+
+<iframe src="https://docs.google.com/spreadsheets/d/1680EiDxX0SeOq2iNuQtKicHPgRKjq4K6AB28huL09SE/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" width="100%" height="800"></iframe>
+
 
 #### Office Hours
 
