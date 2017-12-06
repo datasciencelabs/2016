@@ -1,0 +1,625 @@
+---
+title: "Netflix Challenge"
+output: html_document
+---
+
+```{r, echo = FALSE}
+library(knitr)
+opts_chunk$set(cache = TRUE, message = FALSE)
+```
+
+
+Recommendation systems use rating data from many products 
+and users to make recommendations for a specific user. 
+Netflix uses a recommendation system to predict your ratings
+for a specific movie.
+
+On October 2006 Netflix offered a challenge to the data science
+community: improve our recommendation algorithm by 10% and
+win a million dollars. In September 2009 
+[the winners were announced](http://bits.blogs.nytimes.com/2009/09/21/netflix-awards-1-million-prize-and-starts-a-new-contest/). You can read a good summary of how the winning algorithm was put together [here](http://blog.echen.me/2011/10/24/winning-the-netflix-prize-a-summary/) 
+and a more detailed explanation [here](http://www.netflixprize.com/assets/GrandPrize2009_BPC_BellKor.pdf).
+
+![winners](http://graphics8.nytimes.com/images/2009/09/21/technology/netflixawards.480.jpg)
+
+In this homework, you will build your own recommendation system.
+You will submit predicted recommendations for a test data set 
+where we have kept the actual recommendations hidden. The set 
+that you will have to predict is [available on GitHub here](https://github.com/datasciencelabs/data/blob/master/movielens-test.csv.gz). 
+We will then check your performance and have our own Netflix 
+challenge. You are allowed to form group. The winning team, 
+defined by the best root mean squared error (RMSE), 
+will receive a prize. Along the way we will learn about 
+regularization and PCA to estimate hidden factors.
+
+In the problems below, we will ask you to try out different models. 
+Keep track of the RMSE you get for each one because we will ask 
+you to report it at the end.
+
+## Problem 1
+
+### Problem 1A
+Load the [large data set which is compressed](https://github.com/datasciencelabs/data/blob/master/movielens-test.csv.gz) into R. Call the data set `ratings`. 
+How many users are there in the `ratings` data set? 
+How many movies are in the `ratings` data set? 
+What is the lowest rating in the data set? The highest? 
+
+**Hint**: You can read in compressed file with `read_csv(gzfile(filename))`
+
+```{r}
+## put your code here
+
+library(readr)
+library(dplyr)
+library(tidyr)
+filename <- "~/Downloads/movielens-train.csv.gz"
+ratings <- read_csv(gzfile(filename)) 
+ratings %>% summarize(
+  n_users=n_distinct(userId),
+  n_movies=n_distinct(movieId),
+  min_rating=min(rating),  
+  max_rating=max(rating))
+```
+
+### Problem 1B
+
+What is the median number of movies each user has rated? 
+What is the maximum number of movies rated by a single user? 
+
+```{r}
+## put your code here
+
+ratings %>% group_by(userId) %>% 
+  summarize(n_movies=n()) %>% 
+  summarize(median = median(n_movies), max = max(n_movies))
+```
+
+Comment on these results and how they compare to the total
+number of movies in the data set.
+
+**Your answer here**: commentary section is getting at *sparsity*
+
+
+
+### Problem 1C
+
+Now that we know some basic facts about our data set, 
+let's randomly split the data into training and test data. 
+Use `set.seed(755)` and the `sample()` function to select 
+your test index to create two separate data frames
+called: `train` and `test` from the original `ratings` data frame. 
+Please have `test` contain a randomly selected 10% of the rows 
+of `ratings`, and have `train` contain the other 90%. We will 
+use these data frames to do the rest of the analyses in the problem set.
+After you create `train` and `test`, you can remove `ratings` 
+to save space. 
+
+
+```{r}
+## put your code here
+
+set.seed(755)
+n_test <- round(nrow(ratings) / 10)
+test_indices <- sample(1:nrow(ratings), n_test, replace=FALSE)
+test <- ratings[test_indices,]
+train <- ratings[-test_indices,]
+rm(ratings) #to save space
+```
+
+### Problem 1D
+Write a function called `RMSE()` that takes two numeric vectors
+(one corresponding to the true movie ratings, and one 
+corresponding to predicted movie ratings) as input, and returns 
+the root mean square error (RMSE) between the two as output. 
+The definition of root mean square error is square root of the 
+average of the residuals squared:
+
+$$\mbox{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^N (\hat{Y}_i - Y_i)^2}$$
+
+where $Y_i$ is the true $i$-th movie rating and 
+$\hat{Y}_i$ our predicted rating. 
+We can interpret this similarly to a standard deviation.
+It is the typical error we make when predicting a movie rating.
+
+Verify that `RMSE(true_ratings=c(4,3,3,4), predicted_ratings=c(4.5,3.5,1,4))` is 1.06.
+
+```{r}
+## put your code here
+
+RMSE <- function(true_ratings, predicted_ratings){
+    sqrt(mean((true_ratings - predicted_ratings)^2))
+}
+
+RMSE(true_ratings=c(4,3,3,4), predicted_ratings=c(4.5,3.5,1,4))
+```
+
+RMSE was the metric used to judge entries in the Netflix challenge.
+The lower the RMSE was on Netflix's quiz set between the submitted 
+rating predictions and the actual ratings, the better the method was. 
+We will be using RMSE to evaluate our machine learning models in 
+this homework as well.
+
+## Problem 2
+
+### Problem 2A
+Our goal here is to fit a model using the `train` data that we 
+can use to predict user ratings for the movies in the `test` data. 
+To begin, let's fit the simplest possible model: suppose we 
+decided to do no statistical work at all and simply predict 
+every single rating to be the average rating in the training set. 
+
+What is the RMSE on the test set using this naive model?
+
+```{r}
+## put your code here
+
+average_rating <- mean(train$rating)
+predictions <- rep(average_rating, nrow(test))
+naive_rmse <- RMSE(test$rating, predictions)
+print(naive_rmse)
+```
+
+### Problem 2B
+
+We get a RMSE of about 1. To win the grand prize of $1,000,000, 
+a participating team had to get an RMSE of about 0.857. 
+So we can definitely do better! 
+
+We have information about individual users and about individual 
+movies. Some movies are likely just better than other movies 
+(more highly-rated on average), and some users are probably more 
+critical of movies than other users (give lower ratings on average). 
+Let's take advantage of that information.
+
+Let's start with a simple model that accounts for differences 
+between movies. In Problem 2A, we predicted all ratings with the 
+same value, the mean. To account for the different ratings we would 
+model the observed rating $Y_{u,i}$ for user $u$ and movie $i$ 
+like this:
+
+$$
+Y_{u,i} = \mu + \varepsilon_{u,i}
+$$
+
+where $\mu$ is the average rating and $\varepsilon_{u,i}$ a random 
+term explaining the differences between ratings.
+
+But we know that some movies are better than others. So we can 
+add a term $b_i$ to account for this and augment the model to 
+
+$$
+Y_{u,i} = \mu + b_i + \varepsilon_{u,i}
+$$
+
+In statistics we usually call the $b$s as effects, but in 
+the Netflix challenge papers they refer to them as "bias" 
+thus the $b$ notation.
+
+To make a prediction we need to estimate $b_i$. 
+We could use the `lm()` function to obtain least square estimates. 
+However, from Problem 1A we know that there are over 20,000 movies
+in our `train` data set.
+The `lm()` function is not really meant for such scenarios. 
+There are tools in R for such situation, but because we know that the 
+least square estimate is just the average of $Y_{u,i} - \hat{\mu}$ 
+for each movie, where $\hat{\mu}$ the average computed in
+Problem 2A, we can simply use these averages.
+
+Compute an estimate $\hat{b}_i$ for each $b_i$. Visualize and 
+describe the distribution of the $\hat{b}_i$. Then, create a 
+prediction with $\hat{\mu} + \hat{b}_i$ and calculate the RMSE.
+
+**Hint 1**: Use `group_by()` and `summarize()` to estimate the $b_i$ 
+and then one of the `join` functions to create a predictor 
+for each user/movie combination in the test set. 
+
+**Hint 2**: When you go predict on the test set, some of the users 
+in the test set are not in the train set. You will not be able to 
+estimate $b_i$ for them. Use the `replace_na()` function to make 
+these biases 0.
+
+```{r}
+## put your code here
+
+# compute an estimate for each b_i
+mu <- mean(train$rating)
+movie_means <- train %>% 
+  group_by(movieId) %>% 
+  summarize(b_i = mean(rating - mu))
+
+### Explore the distribution
+hist(movie_means$b_i)
+
+### To make prediction use join
+joined <- test %>% 
+  left_join(movie_means, by='movieId') %>% 
+  replace_na(list(b_i=0))
+
+predicted_ratings <- mu + joined$b_i
+print(RMSE(predicted_ratings, test$rating))
+```
+
+
+### Problem 2C
+
+In Problem 2B, we noted that the distribution for 
+the $b_i$ had values as small as -3. Use 
+[this file](https://raw.githubusercontent.com/datasciencelabs/data/master/movies.csv) 
+to get the movie titles and add them to your data frame 
+containing the $b_i$ movie biases.
+What are the 10 best and 10 worst 
+rated movies based on the bias estimate $b_i$? 
+Report the number of users that rated each one. 
+
+```{r}
+## put your code here
+
+mu <- mean(train$rating)
+movie_means <- train %>% ## as above but adding n_i
+  group_by(movieId) %>% 
+  summarize(b_i = mean(rating - mu), n_i = n())
+
+##now use join to add movie titles:
+movies <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/movies.csv")
+movie_means <- movie_means %>% left_join(movies) 
+
+## use arrange() to look at top 10 and bottom 10
+arrange(movie_means, b_i) %>% 
+    select(title, n_i, b_i) %>% 
+    print(n=10)
+arrange(movie_means, desc(b_i)) %>% 
+    select(title, n_i, b_i) %>% 
+    print(n=10)
+```
+
+
+### Problem 2D
+
+In Problem 2C, we saw that the supposed "best" and "worst"
+movies were rated by very few users. These movies were 
+mostly obscure ones. This is because with just a few users,
+we have more uncertainty. Therefore, larger estimates 
+of $b_i$, negative or positive, are more likely. 
+These are "noisy" estimates that we should not trust, 
+especially when it comes to prediction. Large errors can 
+increase our RMSE, so we would rather be conservative
+when not sure.
+
+In previous homeworks, we computed standard error and 
+constructed confidence intervals to account for different 
+levels of uncertainty. However, when making predictions we 
+need one number not an interval. For this we introduce the 
+concept of regularization.
+
+Regularization permits us to penalize large estimates that 
+come from small sample sizes. It has commonalities with the 
+Bayesian approach that "shrunk" predictions. The general 
+idea is to minimize a penalized least squares equation
+
+$$\sum_{i=1}^I \sum_{u=1}^{n_i} (Y_{u,i} - \mu - b_i)^2 + \lambda \sum_{i=1}^I b_i^2$$
+
+This leads to a regularized estimate that can be approximated with:
+$$
+\hat{b}_i(\lambda) = \frac{1}{\lambda + n_i} \sum_{u=1}^{n_i} (Y_{u,i} - \hat{\mu})
+$$
+
+where $n_i$ is the number of ratings made for  movie $i$. The 
+larger the $\lambda$ or the smaller the $n_i$, 
+the more we "shrink" $\hat{b}_i(\lambda)$ to 0. 
+
+Compute these regularized estimates of $b_i$ using 
+$\lambda=5$. Then, look at the top 10 best and worst movies. 
+Do the movies make more sense now? Then see if the RMSE gets better. 
+
+```{r}
+## put your code here
+
+lambda <- 5
+mu <- mean(train$rating)
+movie_reg_means <- train %>% 
+  group_by(movieId) %>% 
+  summarize(b_i = sum(rating - mu)/(n()+lambda), n_i = n())
+
+movies <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/movies.csv")
+movie_reg_means <- movie_reg_means %>% left_join(movies) 
+arrange(movie_reg_means, b_i) %>% select(title, n_i, b_i)
+arrange(movie_reg_means, desc(b_i)) %>% select(title, n_i, b_i)
+
+joined <- test %>% 
+  left_join(movie_reg_means, by='movieId') %>% 
+  replace_na(list(b_i=0))
+
+predicted_ratings <- mu + joined$b_i
+print(RMSE(predicted_ratings, test$rating))
+
+
+##To see what happens
+library(ggplot2)
+data_frame(original = movie_means$b_i, 
+           regularlized = movie_reg_means$b_i, 
+           n = movie_reg_means$n) %>%
+    ggplot(aes(original, regularlized, size=log10(n))) + 
+        geom_point(shape=1, alpha=0.5)
+```
+
+
+### Problem 2E
+
+
+We have improved the RMSE substantially from our 
+initial naive guess. What else can we do to improve? 
+Let's compute the average rating for user $u$. 
+
+```{r}
+## put your code here
+
+user_means <- train %>% 
+  group_by(userId) %>% 
+  summarize(b_u=mean(rating)) %>% 
+  ggplot(aes(b_u)) + geom_histogram()
+```
+
+Note that there is substantial variability across users 
+as well. This means some users are harsher than others 
+and implies that a further improvement to our model may be:
+
+$$ 
+Y_{u,i} = \mu + b_i + b_u + \varepsilon_{u,i}
+$$
+
+where is $b_u$ a user-specific effect. Now it is possible 
+that some users appear to be harsher than others only 
+because they rate underaverage movies. For this reason we 
+prefer to estimate $b_u$ using the residuals.
+
+$$
+\hat{b}_u = \frac{1}{n_u} \sum_{i=1}^{n_u} (Y_{u,i} - \hat{\mu} - \hat{b}_i)
+$$
+
+where $\hat{\mu}$ and $\hat{b}_i$ are calculated in the previous 
+problems. Note that in theory we can use the least squares 
+estimate provided by `lm()` but this approach will crash our 
+computer. Furthermore, we prefer the regularized estimate of 
+$b_u$. As with the movies, you will find that the harshest 
+and kindest raters will be those that rated few movies and 
+thus produce more uncertain estimates. We will therefore 
+also regularize the user bias estimate:
+
+$$
+\hat{b}_u = \frac{1}{\alpha + n_u} \sum_{i=1}^{n_u} (Y_{u,i} - \hat{\mu} - \hat{b}_i)
+$$
+
+Let $\alpha=10$. Estimate the user effects $\hat{b}_u$. 
+Then predict ratings and compute an RMSE. Note that although 
+we are not requiring it here, we can use cross-validation 
+to pick the $\alpha$s.
+
+```{r}
+## put your code here
+
+##we compute movie_means again to have
+##all code in same place
+lambda <- 5
+alpha <- 10
+mu <- mean(train$rating)
+movie_reg_means <- train %>% ##as above but adding n_i
+  group_by(movieId) %>% 
+  summarize(b_i = sum(rating - mu)/(n()+lambda)) 
+
+user_reg_means <- train %>% left_join(movie_reg_means) %>%
+  mutate(resids = rating - mu - b_i) %>% group_by(userId) %>%
+  summarize(b_u = sum(resids)/(n()+alpha))
+
+joined <- test %>% 
+  left_join(movie_reg_means, by='movieId') %>% 
+  left_join(user_reg_means, by='userId') %>% 
+  replace_na(list(b_i=0, b_u=0))
+
+predicted_ratings <- mu + joined$b_i + joined$b_u
+print(RMSE(predicted_ratings, test$rating)) #0.8683076
+```
+
+
+
+## Problem 3
+
+Another common strategy for ratings prediction is matrix 
+decomposition. The winning team used this approach and is described [here](http://www.netflixprize.com/assets/ProgressPrize2008_BellKor.pdf).
+This approach is very much related to the PCA described in 
+class. This problem will demonstrate how to use PCA to uncover
+broad, latent patterns in user/movie relationships, and how to 
+use the results of PCA to predict unknown user/movie relationships.
+
+The general idea comes from the realization that there are 
+clusters of movies that some people will like and others people 
+won't. For example, there may be age divides, gender divides, 
+"sophistication" divides, etc. This implies that a more complete 
+model will include a term that is specific to groups of movies. 
+For example, we let $X_{i,1} = 1$ if movie $i$ is a high budget
+blockbuster and 0 otherwise. We can model each users effect:
+
+$$ 
+Y_{u,i} = \mu + b_i + b_u + b_{1,i} X_{i,1} + \varepsilon_{u,i}
+$$
+
+We may have other groupings: say $X_{i,2}=1$ if movie $i$ is a low 
+brow comedy and 0 otherwise. Our model then gets augmented as 
+
+$$ 
+Y_{u,i} = \mu + b_i + b_u + b_{1,i} X_{i,1} + b_{2,i} X_{i,2} + \varepsilon_{u,i}
+$$
+
+But how do we find these $X$? If we think there are several
+of these, then the model looks like:
+
+$$ 
+Y_{u,i} = \mu + b_i + b_u + \sum_{j=1}^p b_{j,i} X_{i,j}  + \varepsilon_{u,i}
+$$
+
+You can learn in a more advanced course that PCA can actually 
+be used to estimate the $X$ that explain most variability. 
+To do this we need to construct a matrix with movies in the rows 
+and users in the columns. We can use the `spread()` function 
+from `tidyr` to do this. However, if we just do this blindly 
+we will get a matrix so large, that our computer will crash. 
+Also, the matrix will have many NAs because not all users rate 
+all movies. There are techniques to deal with these types of data. 
+Here we will simplify the problem by looking at subset of the 
+data with highly active users and movies that are rated by many.
+
+```{r}
+train_small <- train %>% 
+    filter(movieId %in% unique(test$movieId) & userId %in% unique(test$userId)) %>%
+    group_by(movieId) %>% 
+    filter(n()>=5000) %>% 
+    ungroup %>%
+    group_by(userId) %>% 
+    filter(n()>=250) %>% 
+    ungroup  
+```
+
+## Problem 3A
+
+To estimate this part of the model: $\sum_{j=1}^p b_{j,i} X_{i,k}$, 
+we will consider the residuals $Y_{u,i}-\hat{\mu}-\hat{b}_i-\hat{b}_u$.
+Create a column `resids` with these residuals for the 
+`train_small` data set using the regularlized estimates you computed in 
+Problem 2E.
+
+```{r}
+## put your code here
+
+## movie_reg_means and user_reg_means come from 2E
+train_small <- train_small %>% 
+  left_join(movie_reg_means, by='movieId') %>% 
+  left_join(user_reg_means, by='userId') %>% 
+  mutate(resids = rating - mu - b_i - b_u)
+```
+
+
+
+## Problem 3B
+
+Now, we can construct a new matrix using the 
+`spread()` function in `tidyr` (call it `Y`)
+with movies in the rows and users in the columns. 
+Use one of the join functions to merge the movie titles
+from the 
+[movies.csv file on GitHub](https://raw.githubusercontent.com/datasciencelabs/data/master/movies.csv). Remove the `genres` column (i.e. only 
+keep the `title` column. Remove the year from the movie titles. 
+
+Finally, create two objects (one with the `movieId` in `Y`,
+call it `movie_ids`, and one with the `title` in `Y`,
+call it `movie_titles`). These will be used in a little bit. Afterwards, remove the `movieID` and `title` columns in `Y`
+using the `select()` function and then pipe the data frame 
+to `as.matrix()` to convert to a matrix. 
+Change all the missing data to a 0. There are better choices, 
+but for simplicity we just use 0. 
+
+```{r}
+## put your code here
+
+Y <- train_small %>% 
+    select(userId, movieId, resids) %>% 
+    spread(userId, resids) %>% 
+    left_join(movies) %>% 
+    select(-genres) %>%
+    mutate(title = gsub("\\s\\([^)]*\\)","",title)) ##remove the year
+
+movie_ids <- Y$movieId
+movie_titles <- Y$title
+
+Y <- select(Y, -movieId, -title) %>% as.matrix
+Y[is.na(Y)] <- 0
+```
+
+
+Use the `prcomp()` function to obtain the PCs of `Y`. 
+The PCs will be our estimates of the $X$. 
+Use data visualization to explore if in fact the first PCs 
+are grouping movies into meaningful groups. 
+
+**Hint**: Use the `movie_titles` to label points. 
+
+```{r}
+## put your code here
+
+pca <- prcomp(Y, center=FALSE, scale=FALSE) ## can be made faster with svd function
+library(ggplot2)
+theme_set(theme_bw(base_size = 16))
+library(ggrepel)
+
+tmp <- data_frame(PC3 = pca$x[,3], 
+                  PC4 = pca$x[,4], 
+                  name = movie_titles) ##change these to other PCs. These seem to show interesting splits
+
+##PC3 seems to be age related. Adn PC4 deep versus silly.
+keep <- c(
+  arrange(tmp, PC3) %>% slice(1:10) %>% .$name,
+  arrange(tmp, desc(PC3)) %>% slice(1:10) %>% .$name,
+  arrange(tmp, PC4) %>% slice(1:10) %>% .$name,
+  arrange(tmp, desc(PC4)) %>% slice(1:10) %>% .$name)
+  
+tmp %>%  ggplot(aes(PC3, PC4)) + geom_point() + 
+  geom_text_repel(aes(PC3, PC4, label=name), 
+                  data = filter(tmp, name%in%keep))
+```
+
+
+## Problem 3C
+
+If `pca` holds your `prcomp()` object with the PCs from `Y`, 
+you can reconstruct and estimate with, say, $k$ = 20 
+PCs using the following:
+
+```{r, eval = FALSE}
+k <- 20
+pred <- pca$x[,1:k] %*% t(pca$rotation[,1:k])
+colnames(pred) <- colnames(Y)
+```
+
+Use the `gather()` and the `pred` object above to create a 
+prediction using these data for the `test` data set. 
+What RMSE do you get?
+
+```{r}
+## put your code here
+
+k <- 20
+pred <- pca$x[,1:k] %*% t(pca$rotation[,1:k])
+colnames(pred) <- colnames(Y)
+
+interaction <- 
+    data.frame(movieId = movie_ids, pred, check.names=FALSE) %>% 
+    tbl_df %>%
+    gather(userId, b_ui, -movieId) %>% 
+    mutate(userId = as.numeric(userId))
+
+joined <- test %>% 
+  left_join(movie_reg_means, by='movieId') %>% 
+  left_join(user_reg_means, by='userId') %>% 
+  left_join(interaction, by=c('movieId','userId')) %>%
+  replace_na(list(b_i=0, b_u=0, b_ui=0))
+
+predicted_ratings <- mu + joined$b_i + joined$b_u + joined$b_ui
+print(RMSE(predicted_ratings, test$rating))
+```
+
+## Problem 3D
+
+We tried out 5 different models. Report the RMSE for all 5.
+If you are so inclined, including others such as what you 
+get with different $\lambda$, $\alpha$ or $k$.
+
+
+## Problem 4
+
+Download [a test data set available on GitHub here](https://github.com/datasciencelabs/data/blob/master/movielens-test.csv.gz). 
+Make predictions to fill in the `NA`s and save a
+file with the same format but with the ratings filled in. 
+Submit this as a `.csv` file as part of your homework with your name in
+in the file name. 
+
+
+
+
